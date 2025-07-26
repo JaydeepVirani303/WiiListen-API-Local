@@ -2,7 +2,6 @@ package com.wiilisten.entity;
 
 import java.util.Date;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
