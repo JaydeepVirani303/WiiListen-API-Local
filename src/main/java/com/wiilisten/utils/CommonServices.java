@@ -2,13 +2,7 @@ package com.wiilisten.utils;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -458,18 +452,22 @@ public class CommonServices {
 
 	public LocalTime UTCLocalDateTimeToISOLocalTimeStringWithTimeZone(LocalDateTime datetime, String timezone) {
 
-		LocalTime localDate = null;
+		LocalTime localTime = null;
 		try {
+			LOGGER.info("Converting UTC datetime [{}] to local time in timezone [{}]", datetime, timezone);
+
 			ZoneId requestZoneId = ZoneId.of(timezone);
 			LocalDateTime localDateTime = datetime;
 			ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneOffset.UTC);
 			ZonedDateTime utcDateTime = zonedDateTime.withZoneSameInstant(requestZoneId);
-			localDate = utcDateTime.toLocalTime();
+			localTime = utcDateTime.toLocalTime();
 
 		} catch (final Exception e) {
-
+			LOGGER.error("Error while converting UTC to local time. Input datetime: {}, timezone: {}. Error: {}",
+					datetime, timezone, e.getMessage(), e);
 		}
-		return localDate;
+		LOGGER.info("Converted time: {}", localTime);
+		return localTime;
 	}
 
 	public LocalTime localDateTimeToUtcTime(LocalDateTime now, String zone) {
@@ -488,59 +486,158 @@ public class CommonServices {
 		return utcLocalDateTime;
 	}
 
+//	public List<TimeSlotDto> generateTimeSlots(LocalTime startTime, LocalTime endTime, int slotDuration) {
+//		List<TimeSlotDto> timeSlots = new ArrayList<>();
+//
+//		// Loop from start time to end time, adding slots at specified interval
+//		LocalTime currentTime = startTime;
+//		while (currentTime.plusMinutes(slotDuration).isBefore(endTime) || currentTime.equals(endTime)) {
+//			// Define the end time for the current time slot
+//			LocalTime slotEndTime = currentTime.plusMinutes(slotDuration);
+//
+//			// Create a TimeSlot object for the current time slot
+//			TimeSlotDto timeSlot = new TimeSlotDto(currentTime, slotEndTime);
+//
+//			// Add the time slot to the list
+//			timeSlots.add(timeSlot);
+//
+//			// Move to the start of the next time slot
+//			currentTime = slotEndTime;
+//		}
+//
+//		return timeSlots;
+//	}
+
+//	public List<TimeSlotDto> generateTimeSlotsForCurrentDate(LocalTime startTime, LocalTime endTime, int slotDuration,
+//			String zoneId) {
+//		List<TimeSlotDto> timeSlots = new ArrayList<>();
+//
+//		// Determine the current time
+//		ZoneId zone = ZoneId.of(zoneId);
+//
+//		LocalTime currentTime = ZonedDateTime.now(zone).toLocalTime();
+//
+//		// Loop from start time to end time, adding slots at specified interval
+//		while (startTime.isBefore(endTime) || startTime.equals(endTime)) {
+//			// Skip slots before the current time
+//			if (startTime.isBefore(currentTime)) {
+//				startTime = startTime.plusMinutes(slotDuration);
+//				continue;
+//			}
+//
+//			// Define the end time for the current time slot
+//			LocalTime slotEndTime = startTime.plusMinutes(slotDuration);
+//
+//			// Create a TimeSlot object for the current time slot
+//			TimeSlotDto timeSlot = new TimeSlotDto(startTime, slotEndTime);
+//
+//			// Add the time slot to the list
+//			timeSlots.add(timeSlot);
+//
+//			// Move to the start of the next time slot
+//			startTime = slotEndTime;
+//		}
+//		if (!timeSlots.isEmpty()) {
+//			timeSlots.remove(timeSlots.size() - 1);
+//		}
+//
+//		return timeSlots;
+//	}
+
+
 	public List<TimeSlotDto> generateTimeSlots(LocalTime startTime, LocalTime endTime, int slotDuration) {
+		LOGGER.info("Generating time slots...");
+		LOGGER.info("Input parameters - StartTime: {}, EndTime: {}, SlotDuration: {} minutes", startTime, endTime, slotDuration);
+
 		List<TimeSlotDto> timeSlots = new ArrayList<>();
 
-		// Loop from start time to end time, adding slots at specified interval
+		if (startTime == null || endTime == null || slotDuration <= 0) {
+			LOGGER.error("Invalid input parameters: startTime={}, endTime={}, slotDuration={}", startTime, endTime, slotDuration);
+			return timeSlots;
+		}
+
+		if (endTime.isBefore(startTime)) {
+			LOGGER.error("End time {} must be after start time {}", endTime, startTime);
+			return timeSlots;
+		}
+
 		LocalTime currentTime = startTime;
-		while (currentTime.plusMinutes(slotDuration).isBefore(endTime) || currentTime.equals(endTime)) {
-			// Define the end time for the current time slot
+
+		while (true) {
 			LocalTime slotEndTime = currentTime.plusMinutes(slotDuration);
 
-			// Create a TimeSlot object for the current time slot
-			TimeSlotDto timeSlot = new TimeSlotDto(currentTime, slotEndTime);
+			if (slotEndTime.isAfter(endTime)) {
+				LOGGER.info("Reached end time. Stopping slot generation.");
+				break;
+			}
 
-			// Add the time slot to the list
-			timeSlots.add(timeSlot);
+			if (slotEndTime.isBefore(currentTime)) {
+				LOGGER.info("Detected possible time wrap around. Stopping slot generation.");
+				break;
+			}
 
-			// Move to the start of the next time slot
+			TimeSlotDto slot = new TimeSlotDto(currentTime, slotEndTime);
+			timeSlots.add(slot);
+
+			LOGGER.info("Added time slot: {} - {}", slot.getStartTime(), slot.getEndTime());
+
 			currentTime = slotEndTime;
 		}
 
+		LOGGER.info("Total slots generated: {}", timeSlots.size());
 		return timeSlots;
 	}
 
-	public List<TimeSlotDto> generateTimeSlotsForCurrentDate(LocalTime startTime, LocalTime endTime, int slotDuration,
-			String zoneId) {
+	public List<TimeSlotDto> generateTimeSlotsForCurrentDate(LocalTime startTime, LocalTime endTime, int slotDuration, String zoneId) {
+		LOGGER.info("Generating time slots for current date...");
+		LOGGER.info("Input Parameters - startTime: {}, endTime: {}, slotDuration: {}, zoneId: {}", startTime, endTime, slotDuration, zoneId);
+
 		List<TimeSlotDto> timeSlots = new ArrayList<>();
 
-		// Determine the current time
-		ZoneId zone = ZoneId.of(zoneId);
+		try {
+			ZoneId zone = ZoneId.of(zoneId);
+			LocalTime now = ZonedDateTime.now(zone).toLocalTime();
+			LOGGER.info("Current time in zone {} is {}", zoneId, now);
 
-		LocalTime currentTime = ZonedDateTime.now(zone).toLocalTime();
-
-		// Loop from start time to end time, adding slots at specified interval
-		while (startTime.isBefore(endTime) || startTime.equals(endTime)) {
-			// Skip slots before the current time
-			if (startTime.isBefore(currentTime)) {
-				startTime = startTime.plusMinutes(slotDuration);
-				continue;
+			// Align start time to be at or after 'now'
+			LocalTime current = startTime;
+			while (current.plusMinutes(slotDuration).isBefore(now)) {
+				current = current.plusMinutes(slotDuration);
 			}
 
-			// Define the end time for the current time slot
-			LocalTime slotEndTime = startTime.plusMinutes(slotDuration);
+			// Adjust current to be rounded up to next aligned slot if needed
+			if (now.isAfter(current)) {
+				long minutesSinceStart = Duration.between(current, now).toMinutes();
+				long remainder = minutesSinceStart % slotDuration;
 
-			// Create a TimeSlot object for the current time slot
-			TimeSlotDto timeSlot = new TimeSlotDto(startTime, slotEndTime);
+				if (remainder != 0) {
+					current = now.plusMinutes(slotDuration - remainder);
+					LOGGER.info("Adjusted current to next aligned slot: {}", current);
+				} else {
+					current = now;
+					LOGGER.info("Current aligned with now: {}", current);
+				}
+			}
 
-			// Add the time slot to the list
-			timeSlots.add(timeSlot);
+			while (true) {
+				LocalTime slotEnd = current.plusMinutes(slotDuration);
 
-			// Move to the start of the next time slot
-			startTime = slotEndTime;
-		}
-		if (!timeSlots.isEmpty()) {
-			timeSlots.remove(timeSlots.size() - 1);
+				if (slotEnd.isAfter(endTime) || slotEnd.isBefore(current)) {
+					LOGGER.info("Stopping slot generation. Next slot end {} is invalid (past endTime or time wrap).", slotEnd);
+					break;
+				}
+
+				TimeSlotDto slot = new TimeSlotDto(current, slotEnd);
+				timeSlots.add(slot);
+				LOGGER.info("Generated slot: {} - {}", slot.getStartTime(), slot.getEndTime());
+
+				current = slotEnd;
+			}
+
+			LOGGER.info("Total time slots generated: {}", timeSlots.size());
+		} catch (Exception e) {
+			LOGGER.error("Error while generating time slots: {}", e.getMessage(), e);
+			throw e; // rethrow to propagate the error
 		}
 
 		return timeSlots;
