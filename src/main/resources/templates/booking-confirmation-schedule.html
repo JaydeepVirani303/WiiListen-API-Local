@@ -1,0 +1,148 @@
+
+<!doctype html>
+<html lang="en-US" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Payment Receipt Email Template</title>
+<meta name="description" content="Reset Password Email Template.">
+<style type="text/css">
+a:hover {
+	text-decoration: underline !important;
+}
+</style>
+</head>
+
+<body marginheight="0" topmargin="0" marginwidth="0"
+	style="margin: 0px; background-color: #f2f3f8;" leftmargin="0">
+	<!--100% body table-->
+	<table cellspacing="0" border="0" cellpadding="0" width="100%"
+		bgcolor="#f2f3f8" style="">
+		<tr>
+			<td>
+				<table
+					style="background-color: #f2f3f8; max-width: 670px; margin: 0 auto;"
+					width="100%" border="0" align="center" cellpadding="0"
+					cellspacing="0">
+					<tr>
+						<td style="height: 80px;">&nbsp;</td>
+					</tr>
+					<tr>
+						<td style="text-align: center;"><a href="#" title="logo"
+							target="_blank"> <img width="130" src="logo.png" title="logo"
+								alt="logo">
+						</a></td>
+					</tr>
+					<tr>
+						<td style="height: 20px;">&nbsp;</td>
+					</tr>
+					<tr>
+						<td>
+							<table width="95%" border="0" align="center" cellpadding="0"
+								cellspacing="0"
+								style="max-width: 670px; background: #fff; border-radius: 3px; text-align: center; -webkit-box-shadow: 0 6px 18px 0 rgba(0, 0, 0, .06); -moz-box-shadow: 0 6px 18px 0 rgba(0, 0, 0, .06); box-shadow: 0 6px 18px 0 rgba(0, 0, 0, .06);">
+								<tr>
+									<td style="height: 40px;">&nbsp;</td>
+								</tr>
+								<tr>
+									<td style="padding: 0 35px;">
+										<h1
+											style="color: #1e1e2d; font-weight: 500; margin: 0; font-size: 32px; font-family: 'Rubik', sans-serif;">Your
+											Call Details</h1> <span
+										style="display: inline-block; vertical-align: middle; margin: 29px 0 26px; border-bottom: 1px solid #cecece; width: 100px;"></span>
+										<p
+											style="color: #455056; font-size: 15px; line-height: 24px; margin: 0;">
+											Dear <span th:text="${callerName}">John Doe</span>, Below
+											are your call details.
+										</p>
+										<table
+											style="width: 500px; color: #455056; font-size: 15px; line-height: 24px; margin: 30px auto 0px; border-color: #ddd; text-align: left; border-collapse: collapse;"
+											border="1" cellspacing="0" cellpadding="0">
+											<tr>
+												<td style="padding: 11px; font-weight: 700; color: #000;">Requested
+													Date & Time:</td>
+												<td style="padding: 11px;" th:text="${requestedDateTime}">15
+													July 2024,05:00 PM</td>
+											</tr>
+											<tr>
+												<td style="padding: 11px; font-weight: 700; color: #000;">Approved
+													Date & Time:</td>
+												<td style="padding: 11px;" th:text="${approvedDateTime}">10
+													Aug 2024,05:00 PM</td>
+											</tr>
+											<tr>
+												<td style="padding: 12px; font-weight: 700; color: #000;">Initated
+													Date & Time:</td>
+												<td style="padding: 12px;" th:text="${initiatedDateTime}">12
+													Aug 2024,03:00 PM</td>
+											</tr>
+											<tr>
+												<td style="padding: 11px; font-weight: 700; color: #000;">Completed
+													Date & Time:</td>
+												<td style="padding: 11px;" th:text="${completedDateTime}">12
+													Aug 2024,05:00 PM</td>
+											</tr>
+											<tr>
+												<td style="padding: 11px; font-weight: 700; color: #000;">Total
+													minutes talked:</td>
+												<td style="padding: 11px;" th:text="${totalMinutesTalked}">20
+													Min</td>
+											</tr>
+											<tr>
+												<td style="padding: 12px; font-weight: 700; color: #000;">Listner's
+													Name:</td>
+												<td style="padding: 12px;" th:text="${listenerName}">Vicky
+													Kaushal</td>
+											</tr>
+											<tr>
+												<td style="padding: 12px; font-weight: 700; color: #000;">Listner's
+													Rate Per Min:</td>
+												<td style="padding: 12px;" th:text="${listenerRatePerMin}">1$/Min</td>
+											</tr>
+											<tr>
+												<td style="padding: 12px; font-weight: 700; color: #000;">Total
+													Cost Of Call:</td>
+												<td style="padding: 12px;" th:text="${totalCostOfCall}">20$</td>
+											</tr>
+										</table> <!-- <a href="javascript:void(0);"
+                                            style="background:#8DBA30;text-decoration:none !important; font-weight:500; margin-top:35px; color:#fff;text-transform:uppercase; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Change
+                                            Password</a> -->
+									</td>
+								</tr>
+								<tr>
+									<td style="padding: 15px 0px 0px;" colspan="3">
+										<p
+											style="color: #455056; font-size: 15px; line-height: 24px; margin: 0;">Thank
+											you</p>
+										<p
+											style="color: #455056; font-size: 15px; line-height: 24px; margin: 0;">
+											Willisten Team.</p>
+									</td>
+								</tr>
+								<tr>
+									<td style="height: 40px;">&nbsp;</td>
+								</tr>
+							</table>
+						</td>
+					<tr>
+						<td style="height: 20px;">&nbsp;</td>
+					</tr>
+					<tr>
+						<td style="text-align: center;">
+							<p
+								style="font-size: 14px; color: rgba(69, 80, 86, 0.7411764705882353); line-height: 18px; margin: 0 0 0;">
+								&copy; <strong>www.willisten.com</strong>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<td style="height: 80px;">&nbsp;</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+	<!--/100% body table-->
+</body>
+
+</html>

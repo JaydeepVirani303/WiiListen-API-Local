@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>WiiListen - FAQs</title>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+	content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link
+	href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+	rel="stylesheet"
+	integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+	crossorigin="anonymous" />
+
+<style>
+
+@font-face {
+    font-family: "SF Pro Text";
+    /* src: url("https://wiilisten.s3.amazonaws.com/wiilisten/font/sf_regular.otf"); */
+}
+
+@media only screen and (max-width: 600px) {
+	body {
+		background-color: transparent;
+		font-family: "SF Pro Text";
+	}
+}
+
+#accordionFaq .accordion-item {
+	border-bottom: 0.1em solid #707070;
+}
+
+.accordion .accordion-item+.accordion-item {
+	margin-top: 2rem;
+	border-top: 2em solid red;
+}
+
+.accordion-button:not(.collapsed) {
+	color: black;
+	background-color: transparent;
+	box-shadow: inset 0 -1px 0 transparent;
+}
+
+.accordion-button:focus {
+	z-index: 3;
+	border-color: black;
+	outline: 0;
+	box-shadow: 0 0 0 .0rem black;
+}
+
+.accordion-button-border-top {
+	border-top: 0.1em solid #707070;
+}
+
+</style>
+
+</head>
+<body>
+
+	<div class="accordion accordion-flush" id="accordionFaq"
+		th:each="faq, currentItem : ${faqs}">
+		<div th:class="${currentItem.index == 0 ? 'accordion-item accordion-button-border-top' : 'accordion-item'}">
+			<h2 class="accordion-header"
+				th:id="${'flush-headingOne' + currentItem.index}">
+				<button
+					th:class="${currentItem.index == 0 ? 'accordion-button' : 'accordion-button collapsed'}"
+					type="button" data-bs-toggle="collapse"
+					th:data-bs-target="${'#flush-collapseOne' + currentItem.index}"
+					th:aria-expanded="${currentItem.index == 0 ? true : false}"
+					th:aria-controls="${'#flush-collapseOne' + currentItem.index}"
+					th:text="${faq.question}"
+					style="font-weight: 600; border-bottom-width: 5px"></button>
+			</h2>
+			<div th:id="${'flush-collapseOne' + currentItem.index}"
+				th:class="${currentItem.index == 0} ? 'accordion-collapse collapse show' : 'accordion-collapse collapse'"
+				th:aria-labelledby="${'flush-headingOne' + currentItem.index}"
+				data-bs-parent="#accordionFaq">
+				<div class="accordion-body" th:text="${faq.answer}" style="color: #7C7D86"></div>
+			</div>
+		</div>
+	</div>
+
+	<script
+		src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+		crossorigin="anonymous"></script>
+</body>
+</html>
