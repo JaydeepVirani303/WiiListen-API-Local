@@ -219,70 +219,72 @@ public class ApiV1CommonController extends BaseController {
 	}
 
 	@PostMapping(ApplicationURIConstants.DATELIST)
-	public ResponseEntity<Object> listnerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
-	    LOGGER.info(ApplicationConstants.ENTER_LABEL);
+	public ResponseEntity<Object> listenerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+		LOGGER.info("Entered listenerAvailabilityDates API with ListenerId: {}", idRequestDto.getListenerId());
 
-	    try {
-	        User user = getLoggedInUser();
-	        ListenerProfile listener = getServiceRegistry().getListenerProfileService()
-	                .findByIdAndActiveTrue(idRequestDto.getListenerId());
+		try {
+			User user = getLoggedInUser();
+			LOGGER.info("Logged in user fetched: {}", user.getId());
 
+			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+					.findByIdAndActiveTrue(idRequestDto.getListenerId());
+			LOGGER.info("Listener profile fetched for listenerId {}: {}", idRequestDto.getListenerId(), listener.getId());
 
-					System.err.println("listener : "+listener);
-	        List<ListenerAvailability> availability = getServiceRegistry().getListenerAvailabilityService()
-	                .findByUserAndActiveTrue(listener.getUser());
+			List<ListenerAvailability> availability = getServiceRegistry().getListenerAvailabilityService()
+					.findByUserAndActiveTrue(listener.getUser());
+			LOGGER.info("Listener availability count: {}", availability.size());
 
+			String timeZone = idRequestDto.getTimeZone();
+			LocalDate today = LocalDate.now();
+			int date = today.getDayOfMonth();
+			LocalDate endDate = today.plusMonths(1).withDayOfMonth(date);
 
-					System.err.println("availability : "+availability);
+			List<AvailabilityResponseDto> response = new ArrayList<>();
 
-	        String timeZone = idRequestDto.getTimeZone();
-	        LocalDate today = LocalDate.now();
-	        
-	        int date = today.getDayOfMonth();
-	        
-	        LocalDate endDate = today.plusMonths(1).withDayOfMonth(date); // Adjust to next month's 7th day
-	        List<AvailabilityResponseDto> response = new ArrayList<>();
+			for (ListenerAvailability listenerAvailability : availability) {
+				LOGGER.info("Processing availability for weekday: {}", listenerAvailability.getWeekDay());
 
-	        // Iterate over listener availability
-	        for (ListenerAvailability listenerAvailability : availability) {
-	            DayOfWeek targetDayOfWeek = DayOfWeek.valueOf(listenerAvailability.getWeekDay());
+				DayOfWeek targetDayOfWeek = DayOfWeek.valueOf(listenerAvailability.getWeekDay());
+				LocalDate currentDate = getNextValidDate(today, targetDayOfWeek);
 
-	            LocalDate currentDate = getNextValidDate(today, targetDayOfWeek);
+				while (!currentDate.isAfter(endDate)) {
+					LOGGER.info("Checking availability for date: {}", currentDate);
 
-	            while (!currentDate.isAfter(endDate)) {
-	                List<BookedCalls> bookedCalls = getServiceRegistry().getBookedCallsService()
-	                        .findByBookingDateTimeAndListenerAndActiveTrue(currentDate, listener);
+					List<BookedCalls> bookedCalls = getServiceRegistry().getBookedCallsService()
+							.findByBookingDateTimeAndListenerAndActiveTrue(currentDate, listener);
+					LOGGER.info("Booked calls on {}: {}", currentDate, bookedCalls.size());
 
-	                List<TimeSlotDto> allBookedSlots = converBookcallsToTimeSlot(bookedCalls);
+					List<TimeSlotDto> allBookedSlots = converBookcallsToTimeSlot(bookedCalls);
 
-	                List<TimeSlotDto> availableSlots = new ArrayList<>();
+					List<TimeSlotDto> generatedSlots = generateAvailableTimeSlots(
+							currentDate, listenerAvailability, idRequestDto, timeZone);
+					LOGGER.info("Generated time slots on {}: {}", currentDate, generatedSlots.size());
 
-	                    List<TimeSlotDto> generatedSlots = generateAvailableTimeSlots(
-	                            currentDate, listenerAvailability, idRequestDto, timeZone);
+					List<TimeSlotDto> listenerAvailableSlots = findAvailableSlots(generatedSlots, allBookedSlots);
+					LOGGER.info("Available time slots on {}: {}", currentDate, listenerAvailableSlots.size());
 
-	                    List<TimeSlotDto> listenerAvailableSlots = findAvailableSlots(generatedSlots, allBookedSlots);
-	                    availableSlots.addAll(listenerAvailableSlots);
+					AvailabilityResponseDto availabilityResponseDto = new AvailabilityResponseDto();
+					availabilityResponseDto.setDate(currentDate);
+					availabilityResponseDto.setAvailbleTime(listenerAvailableSlots);
+					availabilityResponseDto.setStartTime(currentDate.atTime(listenerAvailability.getStartTime()).atZone(ZoneId.of(timeZone)));
+					availabilityResponseDto.setEndTime(currentDate.atTime(listenerAvailability.getEndTime()).atZone(ZoneId.of(timeZone)));
 
-	                AvailabilityResponseDto availabilityResponseDto = new AvailabilityResponseDto();
-	                availabilityResponseDto.setDate(currentDate);
-	                availabilityResponseDto.setAvailbleTime(availableSlots);
-	                availabilityResponseDto.setStartTime(currentDate.atTime(listenerAvailability.getStartTime()).atZone(ZoneId.of(timeZone)));
-	                availabilityResponseDto.setEndTime(currentDate.atTime(listenerAvailability.getEndTime()).atZone(ZoneId.of(timeZone)));
+					response.add(availabilityResponseDto);
 
-	                response.add(availabilityResponseDto);
+					currentDate = currentDate.plusWeeks(1);
+				}
+			}
 
-	                currentDate = currentDate.plusWeeks(1);
-	            }
-	        }
-			
-	        LOGGER.info(ApplicationConstants.EXIT_LABEL);
-	        return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKeyAndData(
-	                SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response));
+			LOGGER.info("Successfully processed listener availability dates");
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKeyAndData(
+					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response));
 
-	    } catch (Exception e) {
-	        LOGGER.error("Error occurred while processing listener availability dates", e);
-	        return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-	    }
+		} catch (Exception e) {
+			LOGGER.error("Error occurred while processing listener availability dates", e);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
 	}
 
 	private LocalDate getNextValidDate(LocalDate currentDate, DayOfWeek targetDayOfWeek) {
@@ -294,67 +296,105 @@ public class ApiV1CommonController extends BaseController {
 	}
 
 	private List<TimeSlotDto> generateAvailableTimeSlots(LocalDate currentDate, ListenerAvailability slot,
-	        BookedCallDto idRequestDto, String timeZone) {
-	    LocalDateTime startDateTime = currentDate.atTime(slot.getStartTime());
-	    LocalTime startTime = getCommonServices()
-	            .UTCLocalDateTimeToISOLocalTimeStringWithTimeZone(startDateTime, timeZone);
+														 BookedCallDto idRequestDto, String timeZone) {
 
-	    LocalDateTime endDateTime = currentDate.atTime(slot.getEndTime());
-	    LocalTime endTime = getCommonServices()
-	            .UTCLocalDateTimeToISOLocalTimeStringWithTimeZone(endDateTime, timeZone);
+		LOGGER.info("Generating available time slots for date: {}, duration: {} minutes, timezone: {}",
+				currentDate, idRequestDto.getDurationInMinutes(), timeZone);
 
-	    List<TimeSlotDto> allDurationsinMinslots;
-	    if (currentDate.equals(LocalDate.now())) {
-	        allDurationsinMinslots = getCommonServices().generateTimeSlotsForCurrentDate(startTime, endTime,
-	                idRequestDto.getDurationInMinutes(), timeZone);
-	    } else {
-	        allDurationsinMinslots = getCommonServices().generateTimeSlots(startTime, endTime,
-	                idRequestDto.getDurationInMinutes());
-	    }
+		LocalDateTime startDateTime = currentDate.atTime(slot.getStartTime());
+		LocalTime startTime = getCommonServices()
+				.UTCLocalDateTimeToISOLocalTimeStringWithTimeZone(startDateTime, timeZone);
 
-	    List<TimeSlotDto> convertedUtcDurations = new ArrayList<>();
-	    allDurationsinMinslots.forEach(timeSlot -> {
-	        TimeSlotDto dto = new TimeSlotDto();
-	        LocalDateTime slotStartDateTime = currentDate.atTime(timeSlot.getStartTime());
-	        LocalDateTime slotEndDateTime = currentDate.atTime(timeSlot.getEndTime());
+		LocalDateTime endDateTime = currentDate.atTime(slot.getEndTime());
+		LocalTime endTime = getCommonServices()
+				.UTCLocalDateTimeToISOLocalTimeStringWithTimeZone(endDateTime, timeZone);
 
-	        dto.setStartTime(getCommonServices().localDateTimeToUtcTime(slotStartDateTime, timeZone));
-	        dto.setEndTime(getCommonServices().localDateTimeToUtcTime(slotEndDateTime, timeZone));
-	        convertedUtcDurations.add(dto);
-	    });
+		LOGGER.info("Start time in zone {}: {}", timeZone, startTime);
+		LOGGER.info("End time in zone {}: {}", timeZone, endTime);
 
-	    return convertedUtcDurations;
+		List<TimeSlotDto> allDurationsinMinslots;
+		if (currentDate.equals(LocalDate.now())) {
+			LOGGER.info("Generating slots for current date: {}", currentDate);
+			allDurationsinMinslots = getCommonServices().generateTimeSlotsForCurrentDate(
+					startTime, endTime, idRequestDto.getDurationInMinutes(), timeZone);
+		} else {
+			LOGGER.info("Generating slots for future date: {}", currentDate);
+			allDurationsinMinslots = getCommonServices().generateTimeSlots(
+					startTime, endTime, idRequestDto.getDurationInMinutes());
+		}
+
+		LOGGER.info("Total time slots generated (in local time): {}", allDurationsinMinslots.size());
+
+		List<TimeSlotDto> convertedUtcDurations = new ArrayList<>();
+		for (TimeSlotDto timeSlot : allDurationsinMinslots) {
+			TimeSlotDto dto = new TimeSlotDto();
+
+			LocalDateTime slotStartDateTime = currentDate.atTime(timeSlot.getStartTime());
+			LocalDateTime slotEndDateTime = currentDate.atTime(timeSlot.getEndTime());
+
+			dto.setStartTime(getCommonServices().localDateTimeToUtcTime(slotStartDateTime, timeZone));
+			dto.setEndTime(getCommonServices().localDateTimeToUtcTime(slotEndDateTime, timeZone));
+
+			convertedUtcDurations.add(dto);
+
+			LOGGER.info("Converted slot to UTC -> Start: {}, End: {}", dto.getStartTime(), dto.getEndTime());
+		}
+
+		LOGGER.info("Final list of available UTC slots returned: {}", convertedUtcDurations.size());
+		return convertedUtcDurations;
 	}
 
-	private List<TimeSlotDto> findAvailableSlots(List<TimeSlotDto> allDurationsinMinslots,
-	        List<TimeSlotDto> allBookedSlots) {
-	    List<TimeSlotDto> availableSlots = new ArrayList<>();
-	    for (TimeSlotDto timeSlot : allDurationsinMinslots) {
-	        boolean isAvailable = true;
-	        for (TimeSlotDto bookedSlot : allBookedSlots) {
-	            if (timeSlot.overlaps(bookedSlot)) {
-	                isAvailable = false;
-	                break;	
-	            }
-	        }
-	        if (isAvailable) {
-	            availableSlots.add(timeSlot);
-	        }
-	    }
-	    return availableSlots;
+	private List<TimeSlotDto> findAvailableSlots(List<TimeSlotDto> allDurationsInMinSlots,
+												 List<TimeSlotDto> allBookedSlots) {
+		LOGGER.info("Finding available slots...");
+		LOGGER.info("Total possible duration slots: {}", allDurationsInMinSlots.size());
+		LOGGER.info("Total booked slots: {}", allBookedSlots.size());
+
+		List<TimeSlotDto> availableSlots = new ArrayList<>();
+
+		for (TimeSlotDto timeSlot : allDurationsInMinSlots) {
+			boolean isAvailable = true;
+
+			LOGGER.info("Checking slot: {} - {}", timeSlot.getStartTime(), timeSlot.getEndTime());
+
+			for (TimeSlotDto bookedSlot : allBookedSlots) {
+				if (timeSlot.overlaps(bookedSlot)) {
+					LOGGER.info("Slot {} - {} overlaps with booked slot {} - {}",
+							timeSlot.getStartTime(), timeSlot.getEndTime(),
+							bookedSlot.getStartTime(), bookedSlot.getEndTime());
+					isAvailable = false;
+					break;
+				}
+			}
+
+			if (isAvailable) {
+				availableSlots.add(timeSlot);
+				LOGGER.info("Slot {} - {} is available", timeSlot.getStartTime(), timeSlot.getEndTime());
+			}
+		}
+
+		LOGGER.info("Total available slots found: {}", availableSlots.size());
+		return availableSlots;
 	}
+
 
 	private List<TimeSlotDto> converBookcallsToTimeSlot(List<BookedCalls> listOfbookingDateCalls) {
-	    List<TimeSlotDto> availableList = new ArrayList<>();
-	    for (BookedCalls call : listOfbookingDateCalls) {
-	        LocalTime startTime = getCommonServices().getTimeFromDate(call.getBookingDateTime());
-	        LocalTime endTime = getCommonServices().getTimeFromDate(call.getBookingDateTime())
-	                .plusMinutes(call.getDurationInMinutes());
-	        TimeSlotDto slot = new TimeSlotDto(startTime, endTime);
-	        availableList.add(slot);
-	    }
-	    return availableList;
+		List<TimeSlotDto> availableList = new ArrayList<>();
+		LOGGER.info("Converting booked calls to time slots. Total bookings: {}", listOfbookingDateCalls.size());
+		for (BookedCalls call : listOfbookingDateCalls) {
+			LocalTime startTime = getCommonServices().getTimeFromDate(call.getBookingDateTime());
+			LocalTime endTime = startTime.plusMinutes(call.getDurationInMinutes());
+
+			TimeSlotDto slot = new TimeSlotDto(startTime, endTime);
+			availableList.add(slot);
+
+			LOGGER.info("Converted booking - Start: {}, End: {}, Duration: {} mins",
+					startTime, endTime, call.getDurationInMinutes());
+		}
+		LOGGER.info("Total converted time slots: {}", availableList.size());
+		return availableList;
 	}
+
 
 	@PostMapping(ApplicationURIConstants.COMMENT + ApplicationURIConstants.LIST)
 	public ResponseEntity<Object> getSelectedComments(@RequestBody IdRequestDto idRequestDto) {
