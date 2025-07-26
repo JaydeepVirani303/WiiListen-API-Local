@@ -159,7 +159,7 @@ public class ApiV1AdminPageContentController extends BaseController {
 			TrainingMaterial trainingMaterial = new TrainingMaterial();
 			BeanUtils.copyProperties(requestDto, trainingMaterial);
 			trainingMaterial.setActive(true);
-			TrainingMaterial trainingMaterial1 = getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
+			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKey(
 					SuccessMsgEnum.TRAINING_MATERIAL_ADDED_SUCCESSFULLY.getCode()));
