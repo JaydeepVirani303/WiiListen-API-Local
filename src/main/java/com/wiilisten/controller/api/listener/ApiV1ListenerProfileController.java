@@ -313,14 +313,14 @@ public class ApiV1ListenerProfileController extends BaseController {
 	}
 
 	@GetMapping(ApplicationURIConstants.TRAINING_MATERIAL)
-	public ResponseEntity<Object> getTrainingMaterials(@RequestParam("content_type") String contentType) {
+	public ResponseEntity<Object> getTrainingMaterials(@RequestParam("content_type") String contentType, @RequestParam("sub_category") String subCategory) {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
 
 			List<TrainingMaterial> trainingMaterials = getServiceRegistry().getTrainingMaterialService()
-					.findByContentTypeAndActiveTrue(contentType);
+					.findByContentTypeAndSubCategoryAndActiveTrue(contentType, subCategory);
 
 			if (ApplicationUtils.isEmpty(trainingMaterials)) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);

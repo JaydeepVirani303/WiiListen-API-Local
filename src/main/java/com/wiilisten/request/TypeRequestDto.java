@@ -16,4 +16,7 @@ public class TypeRequestDto {
 	@JsonProperty("type")
 	private String type;
 
+	@JsonProperty("sub_category")
+	private String subCategory;
+
 }

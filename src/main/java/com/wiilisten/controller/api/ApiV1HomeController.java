@@ -187,7 +187,7 @@ public class ApiV1HomeController extends BaseController {
 		try {
 
 			List<TrainingMaterial> trainingMaterials = getServiceRegistry().getTrainingMaterialService()
-					.findByContentTypeAndActiveTrue(typeRequestDto.getType());
+					.findByContentTypeAndSubCategoryAndActiveTrue(typeRequestDto.getType(), typeRequestDto.getSubCategory());
 
 			if (ApplicationUtils.isEmpty(trainingMaterials)) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);

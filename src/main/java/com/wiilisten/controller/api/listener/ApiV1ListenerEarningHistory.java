@@ -256,7 +256,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getDateRanges(ApplicationConstants.MONTHLY,
 						convertToLocalDateViaInstant(rangeResponseDto.getStart()),
 						convertToLocalDateViaInstant(rangeResponseDto.getEnd()));
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.MONTHLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
@@ -265,7 +265,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getDateRanges(ApplicationConstants.YEARLY,
 						convertToLocalDateViaInstant(rangeResponseDto.getStart()),
 						convertToLocalDateViaInstant(rangeResponseDto.getEnd()));
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.YEARLY);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.YEARLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
@@ -331,25 +331,32 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				break;
 
 			case "MONTHLY":
-				LocalDate monthStart = startDate.with(TemporalAdjusters.firstDayOfMonth());
-				LocalDate monthEnd = startDate.with(TemporalAdjusters.lastDayOfMonth());
-				LocalDate currentDay = monthStart;
-				while (!currentDay.isAfter(monthEnd)) {
-					ranges.add(new DateRangeResponseDto(convertToDate(currentDay.atStartOfDay()),
-							convertToDate(currentDay.atTime(LocalTime.MAX))));
-					currentDay = currentDay.plusDays(1);
-				}
-				break;
-
-			case "YEARLY":
-				LocalDate yearStart = startDate.with(TemporalAdjusters.firstDayOfYear());
-				LocalDate yearEnd = startDate.with(TemporalAdjusters.lastDayOfYear());
-				LocalDate currentMonthStart = yearStart;
-				while (!currentMonthStart.isAfter(yearEnd)) {
+				LocalDate currentYearStart = startDate.with(TemporalAdjusters.firstDayOfYear());
+				LocalDate currentYearEnd = startDate.with(TemporalAdjusters.lastDayOfYear());
+				LocalDate currentMonthStart = currentYearStart;
+				while (!currentMonthStart.isAfter(currentYearEnd)) {
 					LocalDate currentMonthEnd = currentMonthStart.with(TemporalAdjusters.lastDayOfMonth());
 					ranges.add(new DateRangeResponseDto(convertToDate(currentMonthStart.atStartOfDay()),
 							convertToDate(currentMonthEnd.atTime(LocalTime.MAX))));
 					currentMonthStart = currentMonthStart.plusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
+				}
+				break;
+
+			case "YEARLY":
+				Year currentYear = Year.from(startDate);
+				Year endYear = Year.from(endDate);
+				while (!currentYear.isAfter(endYear)) {
+					LocalDate yearStart = currentYear.atDay(1);
+					LocalDate yearEnd = currentYear.atMonth(12).atEndOfMonth();
+					if (currentYear.equals(Year.from(startDate)) && yearStart.isBefore(startDate)) {
+						yearStart = startDate;
+					}
+					if (currentYear.equals(Year.from(endDate)) && yearEnd.isAfter(endDate)) {
+						yearEnd = endDate;
+					}
+					ranges.add(new DateRangeResponseDto(convertToDate(yearStart.atStartOfDay()),
+							convertToDate(yearEnd.atTime(LocalTime.MAX))));
+					currentYear = currentYear.plusYears(1);
 				}
 				break;
 
@@ -377,10 +384,10 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 			startDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
 			endDate = date.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
 		} else if (type.equals(ApplicationConstants.MONTHLY)) {
-			startDate = date.with(TemporalAdjusters.firstDayOfMonth());
-			endDate = date.with(TemporalAdjusters.lastDayOfMonth());
-		} else if (type.equals(ApplicationConstants.YEARLY)) {
 			startDate = date.with(TemporalAdjusters.firstDayOfYear());
+			endDate = date.with(TemporalAdjusters.lastDayOfYear());
+		} else if (type.equals(ApplicationConstants.YEARLY)) {
+			startDate = date.minusYears(9).with(TemporalAdjusters.firstDayOfYear());
 			endDate = date.with(TemporalAdjusters.lastDayOfYear());
 		}
 		responseDto.setStart(convertToDate(startDate));

@@ -2,6 +2,8 @@ package com.wiilisten.repo;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.wiilisten.entity.TrainingMaterial;
@@ -9,7 +11,12 @@ import com.wiilisten.entity.TrainingMaterial;
 @Repository
 public interface TrainingMaterialRepository extends BaseRepository<TrainingMaterial, Long>{
 
-	List<TrainingMaterial> findByContentTypeAndActiveTrue(String contentType);
+	@Query("SELECT tm FROM TrainingMaterial tm " +
+			"WHERE tm.active = true " +
+			"AND (:contentType IS NULL OR tm.contentType = :contentType) " +
+			"AND (:subCategory IS NULL OR tm.subCategory = :subCategory)")
+	List<TrainingMaterial> findByContentTypeAndSubCategoryAndActiveTrue(@Param("contentType") String contentType,
+																		@Param("subCategory") String subCategory);
 
 	Long countByContentTypeAndActiveTrue(String contentType);
 	
