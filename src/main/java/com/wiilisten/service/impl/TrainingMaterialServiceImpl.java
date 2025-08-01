@@ -18,8 +18,8 @@ public class TrainingMaterialServiceImpl extends BaseServiceImpl<TrainingMateria
 	}
 
 	@Override
-	public List<TrainingMaterial> findByContentTypeAndActiveTrue(String contentType) {
-		return getDaoFactory().getTrainingMaterialRepository().findByContentTypeAndActiveTrue(contentType);
+	public List<TrainingMaterial> findByContentTypeAndSubCategoryAndActiveTrue(String contentType, String subCategory) {
+		return getDaoFactory().getTrainingMaterialRepository().findByContentTypeAndSubCategoryAndActiveTrue(contentType, subCategory);
 	}
 
 	@Override

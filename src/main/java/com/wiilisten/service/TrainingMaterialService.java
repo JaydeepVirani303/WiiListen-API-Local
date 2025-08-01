@@ -6,7 +6,7 @@ import com.wiilisten.entity.TrainingMaterial;
 
 public interface TrainingMaterialService extends BaseService<TrainingMaterial, Long>{
 
-	List<TrainingMaterial> findByContentTypeAndActiveTrue(String contentType);
+	List<TrainingMaterial> findByContentTypeAndSubCategoryAndActiveTrue(String contentType, String subCategory);
 
 	Long countByContentTypeAndActiveTrue(String contentType);
 	
