@@ -54,5 +54,6 @@ public class AdminProfileResponseDto {
 	@JsonProperty("updated_at")
 	private Date updatedAt;
 
+	private Boolean twoFactorEnabled;
 
 }

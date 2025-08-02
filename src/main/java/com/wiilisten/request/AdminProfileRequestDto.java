@@ -37,4 +37,5 @@ public class AdminProfileRequestDto {
 	@JsonProperty("profile_picture")
 	private String profilePicture;
 
+	private Boolean twoFactorEnabled;
 }

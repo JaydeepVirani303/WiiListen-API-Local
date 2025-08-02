@@ -59,4 +59,6 @@ public class Administration {
 	@UpdateTimestamp
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
+
+	private Boolean twoFactorEnabled;
 }
