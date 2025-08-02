@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -117,6 +118,9 @@ public class ListenerProfile {
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
 
+	@JsonProperty("total_commission")
+	private Double totalCommission;
+
 //	TODO change to PENDING when goes to LIVE
 	@PrePersist
 	private void postConstruct() {
@@ -133,6 +137,6 @@ public class ListenerProfile {
 		totalAttendedCalls = 0L;
 		totalCompletedMinutes = 0L;
 		totalEarning = 0.0;
-		
+		totalCommission = 0.0;
 	}
 }

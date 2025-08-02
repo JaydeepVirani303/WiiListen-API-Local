@@ -22,4 +22,7 @@ public class ListenerDetailsResponseDto {
 	@JsonProperty("total_attended_calls")
 	private Long totalAttendedCalls;
 
+	@JsonProperty("total_commission")
+	private Double totalCommission;
+
 }
