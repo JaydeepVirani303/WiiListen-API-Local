@@ -38,4 +38,6 @@ public class SubAdminRegisterRequestDto {
 	@JsonProperty("authorities")
 	private List<AdministrationAuthorityRequestDto> authorities;
 
+	private Boolean twoFactorEnabled = false;
+
 }
