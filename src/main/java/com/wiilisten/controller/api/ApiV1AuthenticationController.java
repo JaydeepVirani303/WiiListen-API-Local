@@ -12,6 +12,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -66,6 +67,9 @@ public class ApiV1AuthenticationController extends BaseController {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(ApiV1AuthenticationController.class);
 
+	@Autowired
+	ApiV1AuthenticationController apiV1Authentication;
+
 	@GetMapping(ApplicationURIConstants.CHECK_USERNAME)
 	public ResponseEntity<Object> checkUniqueUsername(
 			@RequestParam(name = ApplicationConstants.USERNAME_LABEL) String userName) {
@@ -97,8 +101,7 @@ public class ApiV1AuthenticationController extends BaseController {
 		try {
 
 			User user = getServiceRegistry().getUserService().findByEmailAndActiveTrue(loginRequest.getEmail());
-			Administration administration = getServiceRegistry().getAdministrationService()
-					.findByEmailAndActiveTrue(loginRequest.getEmail());
+			Administration administration = getServiceRegistry().getAdministrationService().findByEmailAndActiveTrue(loginRequest.getEmail());
 //			if (user == null) {
 //				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 //				return ResponseEntity.ok(
@@ -184,6 +187,11 @@ public class ApiV1AuthenticationController extends BaseController {
 
 				administration.setIsLoggedIn(true);
 				getServiceRegistry().getAdministrationService().saveORupdate(administration);
+
+				//send otp if two fact auth enable
+				if (administration.getTwoFactorEnabled() && (administration.getRole().equals(ApplicationConstants.SUBADMIN) || administration.getRole().equals(ApplicationConstants.ADMIN))) {
+					apiV1Authentication.processForgotPasswordOtp(administration.getEmail().trim());
+				}
 
 				String token = getTokenUtil().generateToken();
 //				LoginResponse response = new LoginResponse();				
@@ -604,45 +612,55 @@ public class ApiV1AuthenticationController extends BaseController {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
-			String email = otpRequest.getEmail();
-
-			User user = getServiceRegistry().getUserService().findByEmailAndActiveTrue(email);
-			if (user == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(
-						getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.EMAIL_NOT_EXIST.getCode()));
-			}
-
-			OtpHistory otpHistory = getServiceRegistry().getOtpHistoryService().findByEmailAndActiveTrue(email);
-			if (otpHistory != null) {
-				otpHistory.setIsExpired(true);
-				otpHistory.setActive(false);
-				getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
-			}
-
-			String otpValue = getCommonServices().generate4DigitOtp();
-			otpHistory = new OtpHistory();
-			otpHistory.setEmail(email);
-			otpHistory.setOtp(otpValue);
-			otpHistory.setExpiryDateTime(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
-			otpHistory.setReason(OtpReasonEnum.FORGOT_PASSWORD_OTP.getValue());
-			otpHistory.setType(OtpTypeEnum.EMAIL.getType());
-			otpHistory.setUser(user);
-			getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
-
-//			SENDING EMAIL
-			sendEmailVerificationOtpEmail(user.getEmail(), user.getCallName(), otpValue);
-
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
-			return ResponseEntity.ok(getCommonServices()
-					.generateSuccessResponseWithMessageKey(SuccessMsgEnum.OTP_SENT_EMAIL_SUCCESS.getCode()));
-
+			return processForgotPasswordOtp(otpRequest.getEmail());
 		} catch (Exception e) {
 			e.printStackTrace();
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
+	public ResponseEntity<Object> processForgotPasswordOtp(String email) throws MessagingException {
+		// if email is exist in admin side so send otp
+		User user = getServiceRegistry().getUserService().findByEmailAndActiveTrue(email);
+		Administration administration = getServiceRegistry().getAdministrationService().findByEmailAndActiveTrue(email);
+
+		if (administration == null && user == null) {
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(
+					getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.EMAIL_NOT_EXIST.getCode()));
+		}
+
+		OtpHistory otpHistory = getServiceRegistry().getOtpHistoryService().findByEmailAndActiveTrue(email);
+		if (otpHistory != null) {
+			otpHistory.setIsExpired(true);
+			otpHistory.setActive(false);
+			getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
+		}
+
+		String otpValue = getCommonServices().generate4DigitOtp();
+		otpHistory = new OtpHistory();
+		otpHistory.setEmail(email);
+		otpHistory.setOtp(otpValue);
+		otpHistory.setExpiryDateTime(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
+		otpHistory.setReason(OtpReasonEnum.FORGOT_PASSWORD_OTP.getValue());
+		otpHistory.setType(OtpTypeEnum.EMAIL.getType());
+		otpHistory.setUser(user);
+		getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
+		String name = "";
+		if (user != null && !user.getCallName().trim().isEmpty()) {
+			name = user.getCallName();
+		} else if (administration != null && !administration.getName().trim().isEmpty()) {
+			name = administration.getName();
+		}
+//			SENDING EMAIL
+		sendEmailVerificationOtpEmail(email, name, otpValue);
+
+		LOGGER.info(ApplicationConstants.EXIT_LABEL);
+		return ResponseEntity.ok(getCommonServices()
+				.generateSuccessResponseWithMessageKey(SuccessMsgEnum.OTP_SENT_EMAIL_SUCCESS.getCode()));
+	}
+
 
 	@PostMapping(ApplicationURIConstants.NEW_PASSWORD)
 	public ResponseEntity<Object> newPassword(@RequestBody final ChangePasswordRequestDto requestDetails) {

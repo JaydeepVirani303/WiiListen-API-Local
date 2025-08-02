@@ -43,4 +43,5 @@ public class AdminDetailsResponseDto {
 	
 	private Date updatedAt;
 
+	private Boolean twoFactorEnabled;
 }
