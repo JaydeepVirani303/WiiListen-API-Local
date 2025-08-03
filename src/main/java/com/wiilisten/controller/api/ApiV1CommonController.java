@@ -1,15 +1,7 @@
 package com.wiilisten.controller.api;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.OptionalDouble;
+import java.time.*;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +82,7 @@ public class ApiV1CommonController extends BaseController {
 		}
 
 	}
+
 
 	@PostMapping(ApplicationURIConstants.COUPON + ApplicationURIConstants.VERIFY)
 	public ResponseEntity<Object> appliedCoupon(@RequestBody IdStatusRequestDto idStatusRequestDto) {
@@ -218,6 +211,79 @@ public class ApiV1CommonController extends BaseController {
 		}
 	}
 
+	public List<AvailabilityResponseDto> convertAvailableTimeToTimezone1(List<AvailabilityResponseDto> responses, String targetTimeZone) {
+		// Validate target timezone
+		ZoneId targetZoneId;
+		try {
+			targetZoneId = ZoneId.of(targetTimeZone);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Invalid target timezone: " + targetTimeZone);
+		}
+
+		for (AvailabilityResponseDto response : responses) {
+			// Extract source timezone from startTime
+			ZoneId sourceZoneId = response.getStartTime().getZone();
+
+			// Process each TimeSlotDto in availbleTime
+			for (TimeSlotDto slot : response.getAvailbleTime()) {
+				// Use response's date for conversion
+				ZonedDateTime startZoned = ZonedDateTime.of(response.getDate(), slot.getStartTime(), sourceZoneId);
+				ZonedDateTime endZoned = ZonedDateTime.of(response.getDate(), slot.getEndTime(), sourceZoneId);
+
+				// Convert to target timezone
+				ZonedDateTime startTargetZoned = startZoned.withZoneSameInstant(targetZoneId);
+				ZonedDateTime endTargetZoned = endZoned.withZoneSameInstant(targetZoneId);
+
+				// Update slot with converted times (no date field)
+				slot.setStartTime(startTargetZoned.toLocalTime());
+				slot.setEndTime(endTargetZoned.toLocalTime());
+			}
+		}
+
+		return responses;
+	}
+
+	public List<AvailabilityResponseDto> convertAvailableTimeToTimezone(List<AvailabilityResponseDto> responses, String targetTimeZone) {
+		ZoneId targetZoneId;
+		try {
+			targetZoneId = ZoneId.of(targetTimeZone);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Invalid target timezone: " + targetTimeZone);
+		}
+
+		// Map to group slots by target date
+		HashMap<LocalDate, List<TimeSlotDto>> dateToSlots = new HashMap<>();
+		ZoneId sourceZoneId = ZoneId.of("UTC");
+
+		for (AvailabilityResponseDto response : responses) {
+			for (TimeSlotDto slot : response.getAvailbleTime()) {
+				LocalDate effectiveDate = response.getDate();
+				if (slot.getStartTime().isBefore(LocalTime.MIDNIGHT) || slot.getStartTime().equals(LocalTime.MIDNIGHT)) {
+					effectiveDate = response.getDate().plusDays(1);
+				}
+				ZonedDateTime startZoned = ZonedDateTime.of(effectiveDate, slot.getStartTime(), sourceZoneId);
+				ZonedDateTime endZoned = ZonedDateTime.of(effectiveDate, slot.getEndTime(), sourceZoneId);
+				ZonedDateTime startTargetZoned = startZoned.withZoneSameInstant(targetZoneId);
+				ZonedDateTime endTargetZoned = endZoned.withZoneSameInstant(targetZoneId);
+				TimeSlotDto newSlot = new TimeSlotDto(startTargetZoned.toLocalTime(), endTargetZoned.toLocalTime());
+				LocalDate targetDate = startTargetZoned.toLocalDate();
+				dateToSlots.computeIfAbsent(targetDate, k -> new ArrayList<>()).add(newSlot);
+			}
+		}
+
+		// Create new AvailabilityResponseDto objects
+		List<AvailabilityResponseDto> result = new ArrayList<>();
+		for (Map.Entry<LocalDate, List<TimeSlotDto>> entry : dateToSlots.entrySet()) {
+			AvailabilityResponseDto dto = new AvailabilityResponseDto();
+			dto.setDate(entry.getKey());
+			dto.setAvailbleTime(entry.getValue());
+			// Set startTime/endTime (use original or adjust as needed)
+			dto.setStartTime(ZonedDateTime.of(entry.getKey(), LocalTime.MIDNIGHT, targetZoneId));
+			dto.setEndTime(ZonedDateTime.of(entry.getKey().plusDays(1), LocalTime.MIDNIGHT, targetZoneId));
+			result.add(dto);
+		}
+		return result;
+	}
 	@PostMapping(ApplicationURIConstants.DATELIST)
 	public ResponseEntity<Object> listenerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
@@ -230,7 +296,7 @@ public class ApiV1CommonController extends BaseController {
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
 					.findByIdAndActiveTrue(idRequestDto.getListenerId());
 			LOGGER.info("Listener profile fetched for listenerId {}: {}", idRequestDto.getListenerId(), listener.getId());
-
+			String listenerTimeZone = listener.getUser().getTimeZone();
 			List<ListenerAvailability> availability = getServiceRegistry().getListenerAvailabilityService()
 					.findByUserAndActiveTrue(listener.getUser());
 			LOGGER.info("Listener availability count: {}", availability.size());
@@ -241,6 +307,7 @@ public class ApiV1CommonController extends BaseController {
 			LocalDate endDate = today.plusMonths(1).withDayOfMonth(date);
 
 			List<AvailabilityResponseDto> response = new ArrayList<>();
+			List<AvailabilityResponseDto> response1 = new ArrayList<>();
 
 			for (ListenerAvailability listenerAvailability : availability) {
 				LOGGER.info("Processing availability for weekday: {}", listenerAvailability.getWeekDay());
@@ -264,6 +331,7 @@ public class ApiV1CommonController extends BaseController {
 					List<TimeSlotDto> listenerAvailableSlots = findAvailableSlots(generatedSlots, allBookedSlots);
 					LOGGER.info("Available time slots on {}: {}", currentDate, listenerAvailableSlots.size());
 
+
 					AvailabilityResponseDto availabilityResponseDto = new AvailabilityResponseDto();
 					availabilityResponseDto.setDate(currentDate);
 					availabilityResponseDto.setAvailbleTime(listenerAvailableSlots);
@@ -275,15 +343,252 @@ public class ApiV1CommonController extends BaseController {
 					currentDate = currentDate.plusWeeks(1);
 				}
 			}
-
+			LOGGER.info("response :" + response);
+			response1 = convertAvailableTimeToTimezone(response, timeZone);
 			LOGGER.info("Successfully processed listener availability dates");
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKeyAndData(
-					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response));
+					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response1));
 
 		} catch (Exception e) {
 			LOGGER.error("Error occurred while processing listener availability dates", e);
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+//	@PostMapping(ApplicationURIConstants.DATELIST)
+//	public ResponseEntity<Object> listnerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
+//		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+//
+//		try {
+//			User user = getLoggedInUser();
+//			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+//					.findByIdAndActiveTrue(idRequestDto.getListenerId());
+//
+//			System.err.println("listener : "+listener);
+//			List<ListenerAvailability> availability = getServiceRegistry().getListenerAvailabilityService()
+//					.findByUserAndActiveTrue(listener.getUser());
+//
+//			System.err.println("availability : "+availability);
+//
+//			String timeZone = idRequestDto.getTimeZone();
+//			String listenerTimeZone = listener.getUser().getTimeZone();
+//			LocalDate today = LocalDate.now();
+//
+//			int date = today.getDayOfMonth();
+//
+//			LocalDate endDate = today.plusMonths(1).withDayOfMonth(date);
+//			List<AvailabilityResponseDto> response = new ArrayList<>();
+//
+//			// Iterate over listener availability
+//			for (ListenerAvailability listenerAvailability : availability) {
+//				DayOfWeek targetDayOfWeek = DayOfWeek.valueOf(listenerAvailability.getWeekDay());
+//
+//				LocalDate currentDate = getNextValidDate(today, targetDayOfWeek);
+//
+//				while (!currentDate.isAfter(endDate)) {
+//					List<BookedCalls> bookedCalls = getServiceRegistry().getBookedCallsService()
+//							.findByBookingDateTimeAndListenerAndActiveTrue(currentDate, listener);
+//
+//					List<TimeSlotDto> allBookedSlots = converBookcallsToTimeSlot(bookedCalls);
+//
+//					// Generate time slots with proper timezone conversion
+//					CrossDayTimeSlots crossDaySlots = generateAvailableTimeSlotsWithTimezone(
+//							currentDate, listenerAvailability, idRequestDto, timeZone, listenerTimeZone);
+//
+//					// Handle first day slots
+//					if (!crossDaySlots.getFirstDaySlots().isEmpty()) {
+//						List<TimeSlotDto> firstDayAvailableSlots = findAvailableSlots(crossDaySlots.getFirstDaySlots(), allBookedSlots);
+//
+//						if (!firstDayAvailableSlots.isEmpty()) {
+//							AvailabilityResponseDto firstDayResponse = new AvailabilityResponseDto();
+//							firstDayResponse.setDate(currentDate);
+//							firstDayResponse.setAvailbleTime(firstDayAvailableSlots);
+//							firstDayResponse.setStartTime(crossDaySlots.getStartTime());
+//							firstDayResponse.setEndTime(crossDaySlots.getEndTime());
+//							firstDayResponse.setIsCrossDaySlot(crossDaySlots.getIsCrossDay());
+//
+//							if (crossDaySlots.getIsCrossDay()) {
+//								firstDayResponse.setNextDayDate(currentDate.plusDays(1));
+//								firstDayResponse.setNextDayTimeSlots(crossDaySlots.getSecondDaySlots());
+//							}
+//
+//							response.add(firstDayResponse);
+//						}
+//					}
+//
+//					// Handle second day slots for cross-day availability
+//					if (crossDaySlots.getIsCrossDay() && !crossDaySlots.getSecondDaySlots().isEmpty()) {
+//						LocalDate nextDay = currentDate.plusDays(1);
+//						List<BookedCalls> nextDayBookedCalls = getServiceRegistry().getBookedCallsService()
+//								.findByBookingDateTimeAndListenerAndActiveTrue(nextDay, listener);
+//						List<TimeSlotDto> nextDayBookedSlots = converBookcallsToTimeSlot(nextDayBookedCalls);
+//
+//						List<TimeSlotDto> secondDayAvailableSlots = findAvailableSlots(crossDaySlots.getSecondDaySlots(), nextDayBookedSlots);
+//
+//						if (!secondDayAvailableSlots.isEmpty()) {
+//							AvailabilityResponseDto secondDayResponse = new AvailabilityResponseDto();
+//							secondDayResponse.setDate(nextDay);
+//							secondDayResponse.setAvailbleTime(secondDayAvailableSlots);
+//							secondDayResponse.setStartTime(crossDaySlots.getNextDayStartTime());
+//							secondDayResponse.setEndTime(crossDaySlots.getNextDayEndTime());
+//							secondDayResponse.setIsCrossDaySlot(false);
+//
+//							response.add(secondDayResponse);
+//						}
+//					}
+//
+//					currentDate = currentDate.plusWeeks(1);
+//				}
+//			}
+//
+//			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+//			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKeyAndData(
+//					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response));
+//
+//		} catch (Exception e) {
+//			LOGGER.error("Error occurred while processing listener availability dates", e);
+//			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+//		}
+//	}
+
+	private CrossDayTimeSlots generateAvailableTimeSlotsWithTimezone(LocalDate currentDate, ListenerAvailability slot,
+																	 BookedCallDto idRequestDto, String requestTimeZone, String listenerTimeZone) {
+
+		CrossDayTimeSlots crossDaySlots = new CrossDayTimeSlots();
+
+		// Get the listener's availability times in their timezone
+		LocalDateTime startDateTime = currentDate.atTime(slot.getStartTime());
+		LocalDateTime endDateTime = currentDate.atTime(slot.getEndTime());
+
+		// Convert to requested timezone
+		ZoneId listenerZone = ZoneId.of(listenerTimeZone);
+		ZoneId requestZone = ZoneId.of(requestTimeZone);
+
+		ZonedDateTime startZoned = startDateTime.atZone(listenerZone);
+		ZonedDateTime endZoned = endDateTime.atZone(listenerZone);
+
+		ZonedDateTime startInRequestZone = startZoned.withZoneSameInstant(requestZone);
+		ZonedDateTime endInRequestZone = endZoned.withZoneSameInstant(requestZone);
+
+		// Check if the slot spans across days in the requested timezone
+		LocalDate startDate = startInRequestZone.toLocalDate();
+		LocalDate endDate = endInRequestZone.toLocalDate();
+
+		crossDaySlots.setStartTime(startInRequestZone);
+		crossDaySlots.setEndTime(endInRequestZone);
+
+		if (startDate.equals(endDate)) {
+			// Same day slot
+			crossDaySlots.setIsCrossDay(false);
+			LocalTime startTime = startInRequestZone.toLocalTime();
+			LocalTime endTime = endInRequestZone.toLocalTime();
+
+			List<TimeSlotDto> allSlots;
+			if (currentDate.equals(LocalDate.now())) {
+				allSlots = getCommonServices().generateTimeSlotsForCurrentDate(startTime, endTime,
+						idRequestDto.getDurationInMinutes(), requestTimeZone);
+			} else {
+				allSlots = getCommonServices().generateTimeSlots(startTime, endTime, idRequestDto.getDurationInMinutes());
+			}
+			crossDaySlots.setFirstDaySlots(allSlots);
+
+		} else {
+			// Cross-day slot - split into two separate dates
+			crossDaySlots.setIsCrossDay(true);
+			LocalTime startTime = startInRequestZone.toLocalTime();
+			LocalTime endTime = endInRequestZone.toLocalTime();
+
+			// First day slots (from start time to midnight)
+			LocalTime midnight = LocalTime.of(23, 59, 59);
+			List<TimeSlotDto> firstDaySlots;
+			if (currentDate.equals(LocalDate.now())) {
+				firstDaySlots = getCommonServices().generateTimeSlotsForCurrentDate(startTime, midnight,
+						idRequestDto.getDurationInMinutes(), requestTimeZone);
+			} else {
+				firstDaySlots = getCommonServices().generateTimeSlots(startTime, midnight, idRequestDto.getDurationInMinutes());
+			}
+			crossDaySlots.setFirstDaySlots(firstDaySlots);
+
+			// Second day slots (from midnight to end time)
+			LocalTime startOfDay = LocalTime.of(0, 0);
+			List<TimeSlotDto> secondDaySlots = getCommonServices().generateTimeSlots(startOfDay, endTime, idRequestDto.getDurationInMinutes());
+			crossDaySlots.setSecondDaySlots(secondDaySlots);
+
+			// Set next day start and end times
+			LocalDate nextDay = startDate.plusDays(1);
+			crossDaySlots.setNextDayStartTime(ZonedDateTime.of(nextDay, startOfDay, requestZone));
+			crossDaySlots.setNextDayEndTime(endInRequestZone);
+		}
+
+		return crossDaySlots;
+	}
+
+	// Helper class to handle cross-day time slots
+	private static class CrossDayTimeSlots {
+		private List<TimeSlotDto> firstDaySlots = new ArrayList<>();
+		private List<TimeSlotDto> secondDaySlots = new ArrayList<>();
+		private Boolean isCrossDay = false;
+		private ZonedDateTime startTime;
+		private ZonedDateTime endTime;
+		private ZonedDateTime nextDayStartTime;
+		private ZonedDateTime nextDayEndTime;
+
+		// Getters and setters
+		public List<TimeSlotDto> getFirstDaySlots() {
+			return firstDaySlots;
+		}
+
+		public void setFirstDaySlots(List<TimeSlotDto> firstDaySlots) {
+			this.firstDaySlots = firstDaySlots;
+		}
+
+		public List<TimeSlotDto> getSecondDaySlots() {
+			return secondDaySlots;
+		}
+
+		public void setSecondDaySlots(List<TimeSlotDto> secondDaySlots) {
+			this.secondDaySlots = secondDaySlots;
+		}
+
+		public Boolean getIsCrossDay() {
+			return isCrossDay;
+		}
+
+		public void setIsCrossDay(Boolean isCrossDay) {
+			this.isCrossDay = isCrossDay;
+		}
+
+		public ZonedDateTime getStartTime() {
+			return startTime;
+		}
+
+		public void setStartTime(ZonedDateTime startTime) {
+			this.startTime = startTime;
+		}
+
+		public ZonedDateTime getEndTime() {
+			return endTime;
+		}
+
+		public void setEndTime(ZonedDateTime endTime) {
+			this.endTime = endTime;
+		}
+
+		public ZonedDateTime getNextDayStartTime() {
+			return nextDayStartTime;
+		}
+
+		public void setNextDayStartTime(ZonedDateTime nextDayStartTime) {
+			this.nextDayStartTime = nextDayStartTime;
+		}
+
+		public ZonedDateTime getNextDayEndTime() {
+			return nextDayEndTime;
+		}
+
+		public void setNextDayEndTime(ZonedDateTime nextDayEndTime) {
+			this.nextDayEndTime = nextDayEndTime;
 		}
 	}
 
