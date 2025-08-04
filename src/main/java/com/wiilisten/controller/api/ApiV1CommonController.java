@@ -255,7 +255,21 @@ public class ApiV1CommonController extends BaseController {
 		HashMap<LocalDate, List<TimeSlotDto>> dateToSlots = new HashMap<>();
 		ZoneId sourceZoneId = ZoneId.of("UTC");
 
+		List<AvailabilityResponseDto> result = new ArrayList<>();
+
 		for (AvailabilityResponseDto response : responses) {
+
+			// ✅ If no available time slots, add as-is to result (with adjusted start/end time if needed)
+			if (response.getAvailbleTime() == null || response.getAvailbleTime().isEmpty()) {
+				AvailabilityResponseDto dto = new AvailabilityResponseDto();
+				dto.setDate(response.getDate());
+				dto.setAvailbleTime(new ArrayList<>()); // Keep empty list
+				dto.setStartTime(ZonedDateTime.of(response.getDate(), LocalTime.MIDNIGHT, targetZoneId));
+				dto.setEndTime(ZonedDateTime.of(response.getDate().plusDays(1), LocalTime.MIDNIGHT, targetZoneId));
+				result.add(dto);
+				continue; // Skip conversion
+			}
+
 			for (TimeSlotDto slot : response.getAvailbleTime()) {
 				LocalDate effectiveDate = response.getDate();
 				if (slot.getStartTime().isBefore(LocalTime.MIDNIGHT) || slot.getStartTime().equals(LocalTime.MIDNIGHT)) {
@@ -271,19 +285,19 @@ public class ApiV1CommonController extends BaseController {
 			}
 		}
 
-		// Create new AvailabilityResponseDto objects
-		List<AvailabilityResponseDto> result = new ArrayList<>();
+		// Create new AvailabilityResponseDto objects from grouped slots
 		for (Map.Entry<LocalDate, List<TimeSlotDto>> entry : dateToSlots.entrySet()) {
 			AvailabilityResponseDto dto = new AvailabilityResponseDto();
 			dto.setDate(entry.getKey());
 			dto.setAvailbleTime(entry.getValue());
-			// Set startTime/endTime (use original or adjust as needed)
 			dto.setStartTime(ZonedDateTime.of(entry.getKey(), LocalTime.MIDNIGHT, targetZoneId));
 			dto.setEndTime(ZonedDateTime.of(entry.getKey().plusDays(1), LocalTime.MIDNIGHT, targetZoneId));
 			result.add(dto);
 		}
+
 		return result;
 	}
+
 	@PostMapping(ApplicationURIConstants.DATELIST)
 	public ResponseEntity<Object> listenerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
