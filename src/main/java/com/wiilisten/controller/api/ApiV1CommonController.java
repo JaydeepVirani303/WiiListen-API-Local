@@ -211,93 +211,6 @@ public class ApiV1CommonController extends BaseController {
 		}
 	}
 
-	public List<AvailabilityResponseDto> convertAvailableTimeToTimezone1(List<AvailabilityResponseDto> responses, String targetTimeZone) {
-		// Validate target timezone
-		ZoneId targetZoneId;
-		try {
-			targetZoneId = ZoneId.of(targetTimeZone);
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Invalid target timezone: " + targetTimeZone);
-		}
-
-		for (AvailabilityResponseDto response : responses) {
-			// Extract source timezone from startTime
-			ZoneId sourceZoneId = response.getStartTime().getZone();
-
-			// Process each TimeSlotDto in availbleTime
-			for (TimeSlotDto slot : response.getAvailbleTime()) {
-				// Use response's date for conversion
-				ZonedDateTime startZoned = ZonedDateTime.of(response.getDate(), slot.getStartTime(), sourceZoneId);
-				ZonedDateTime endZoned = ZonedDateTime.of(response.getDate(), slot.getEndTime(), sourceZoneId);
-
-				// Convert to target timezone
-				ZonedDateTime startTargetZoned = startZoned.withZoneSameInstant(targetZoneId);
-				ZonedDateTime endTargetZoned = endZoned.withZoneSameInstant(targetZoneId);
-
-				// Update slot with converted times (no date field)
-				slot.setStartTime(startTargetZoned.toLocalTime());
-				slot.setEndTime(endTargetZoned.toLocalTime());
-			}
-		}
-
-		return responses;
-	}
-
-	public List<AvailabilityResponseDto> convertAvailableTimeToTimezone(List<AvailabilityResponseDto> responses, String targetTimeZone) {
-		ZoneId targetZoneId;
-		try {
-			targetZoneId = ZoneId.of(targetTimeZone);
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Invalid target timezone: " + targetTimeZone);
-		}
-
-		// Map to group slots by target date
-		HashMap<LocalDate, List<TimeSlotDto>> dateToSlots = new HashMap<>();
-		ZoneId sourceZoneId = ZoneId.of("UTC");
-
-		List<AvailabilityResponseDto> result = new ArrayList<>();
-
-		for (AvailabilityResponseDto response : responses) {
-
-			// ✅ If no available time slots, add as-is to result (with adjusted start/end time if needed)
-			if (response.getAvailbleTime() == null || response.getAvailbleTime().isEmpty()) {
-				AvailabilityResponseDto dto = new AvailabilityResponseDto();
-				dto.setDate(response.getDate());
-				dto.setAvailbleTime(new ArrayList<>()); // Keep empty list
-				dto.setStartTime(ZonedDateTime.of(response.getDate(), LocalTime.MIDNIGHT, targetZoneId));
-				dto.setEndTime(ZonedDateTime.of(response.getDate().plusDays(1), LocalTime.MIDNIGHT, targetZoneId));
-				result.add(dto);
-				continue; // Skip conversion
-			}
-
-			for (TimeSlotDto slot : response.getAvailbleTime()) {
-				LocalDate effectiveDate = response.getDate();
-				if (slot.getStartTime().isBefore(LocalTime.MIDNIGHT) || slot.getStartTime().equals(LocalTime.MIDNIGHT)) {
-					effectiveDate = response.getDate().plusDays(1);
-				}
-				ZonedDateTime startZoned = ZonedDateTime.of(effectiveDate, slot.getStartTime(), sourceZoneId);
-				ZonedDateTime endZoned = ZonedDateTime.of(effectiveDate, slot.getEndTime(), sourceZoneId);
-				ZonedDateTime startTargetZoned = startZoned.withZoneSameInstant(targetZoneId);
-				ZonedDateTime endTargetZoned = endZoned.withZoneSameInstant(targetZoneId);
-				TimeSlotDto newSlot = new TimeSlotDto(startTargetZoned.toLocalTime(), endTargetZoned.toLocalTime());
-				LocalDate targetDate = startTargetZoned.toLocalDate();
-				dateToSlots.computeIfAbsent(targetDate, k -> new ArrayList<>()).add(newSlot);
-			}
-		}
-
-		// Create new AvailabilityResponseDto objects from grouped slots
-		for (Map.Entry<LocalDate, List<TimeSlotDto>> entry : dateToSlots.entrySet()) {
-			AvailabilityResponseDto dto = new AvailabilityResponseDto();
-			dto.setDate(entry.getKey());
-			dto.setAvailbleTime(entry.getValue());
-			dto.setStartTime(ZonedDateTime.of(entry.getKey(), LocalTime.MIDNIGHT, targetZoneId));
-			dto.setEndTime(ZonedDateTime.of(entry.getKey().plusDays(1), LocalTime.MIDNIGHT, targetZoneId));
-			result.add(dto);
-		}
-
-		return result;
-	}
-
 	@PostMapping(ApplicationURIConstants.DATELIST)
 	public ResponseEntity<Object> listenerAvailabilityDates(@RequestBody BookedCallDto idRequestDto) {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
@@ -310,19 +223,17 @@ public class ApiV1CommonController extends BaseController {
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
 					.findByIdAndActiveTrue(idRequestDto.getListenerId());
 			LOGGER.info("Listener profile fetched for listenerId {}: {}", idRequestDto.getListenerId(), listener.getId());
-			String listenerTimeZone = listener.getUser().getTimeZone();
+
 			List<ListenerAvailability> availability = getServiceRegistry().getListenerAvailabilityService()
 					.findByUserAndActiveTrue(listener.getUser());
 			LOGGER.info("Listener availability count: {}", availability.size());
 
-			String timeZone = idRequestDto.getTimeZone();
 			LocalDate today = LocalDate.now();
 			int date = today.getDayOfMonth();
 			LocalDate endDate = today.plusMonths(1).withDayOfMonth(date);
 
 			List<AvailabilityResponseDto> response = new ArrayList<>();
-			List<AvailabilityResponseDto> response1 = new ArrayList<>();
-
+			Map<LocalDate, List<TimeSlotDto>> generatedAllSlots = new HashMap<>();
 			for (ListenerAvailability listenerAvailability : availability) {
 				LOGGER.info("Processing availability for weekday: {}", listenerAvailability.getWeekDay());
 
@@ -338,37 +249,74 @@ public class ApiV1CommonController extends BaseController {
 
 					List<TimeSlotDto> allBookedSlots = converBookcallsToTimeSlot(bookedCalls);
 
-					List<TimeSlotDto> generatedSlots = generateAvailableTimeSlots(
-							currentDate, listenerAvailability, idRequestDto, timeZone);
+					Map<LocalDate, List<TimeSlotDto>> generatedSlots = generateTimeSlotsInTargetTimeZone(currentDate, listenerAvailability.getStartTime(), listenerAvailability.getEndTime(), idRequestDto.getTimeZone(), idRequestDto.getDurationInMinutes());
+					LOGGER.info("generated slots : {}", generatedSlots);
+
 					LOGGER.info("Generated time slots on {}: {}", currentDate, generatedSlots.size());
-
-					List<TimeSlotDto> listenerAvailableSlots = findAvailableSlots(generatedSlots, allBookedSlots);
-					LOGGER.info("Available time slots on {}: {}", currentDate, listenerAvailableSlots.size());
-
-
-					AvailabilityResponseDto availabilityResponseDto = new AvailabilityResponseDto();
-					availabilityResponseDto.setDate(currentDate);
-					availabilityResponseDto.setAvailbleTime(listenerAvailableSlots);
-					availabilityResponseDto.setStartTime(currentDate.atTime(listenerAvailability.getStartTime()).atZone(ZoneId.of(timeZone)));
-					availabilityResponseDto.setEndTime(currentDate.atTime(listenerAvailability.getEndTime()).atZone(ZoneId.of(timeZone)));
-
-					response.add(availabilityResponseDto);
-
+					for (Map.Entry<LocalDate, List<TimeSlotDto>> entry : generatedSlots.entrySet()) {
+						LocalDate dates = entry.getKey();
+						List<TimeSlotDto> slots = entry.getValue();
+						//remove overlap slots(already booked slots)
+						slots = findAvailableSlots(slots, allBookedSlots);
+						generatedAllSlots.computeIfAbsent(dates, k -> new ArrayList<>()).addAll(slots);
+					}
 					currentDate = currentDate.plusWeeks(1);
 				}
 			}
-			LOGGER.info("response :" + response);
-			response1 = convertAvailableTimeToTimezone(response, timeZone);
+			List<AvailabilityResponseDto> res = convertToAvailabilityResponse(generatedAllSlots, idRequestDto.getTimeZone());
+			LOGGER.info("response : {}", res);
 			LOGGER.info("Successfully processed listener availability dates");
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKeyAndData(
-					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), response1));
+					SuccessMsgEnum.DATE_LIST_SUCCESSFULLY.getCode(), res));
 
 		} catch (Exception e) {
 			LOGGER.error("Error occurred while processing listener availability dates", e);
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
+	public List<AvailabilityResponseDto> convertToAvailabilityResponse(
+			Map<LocalDate, List<TimeSlotDto>> generatedAllSlots,
+			String zoneIdStr) {
+
+		List<AvailabilityResponseDto> responseList = new ArrayList<>();
+		ZoneId zoneId = ZoneId.of(zoneIdStr);
+
+		for (Map.Entry<LocalDate, List<TimeSlotDto>> entry : generatedAllSlots.entrySet()) {
+			LocalDate date = entry.getKey();
+			List<TimeSlotDto> slots = entry.getValue();
+
+			if (slots == null || slots.isEmpty()) continue;
+
+			// Get start and end time from slots
+			LocalTime earliestStart = slots.stream()
+					.map(TimeSlotDto::getStartTime)
+					.min(LocalTime::compareTo)
+					.orElseThrow();
+
+			LocalTime latestEnd = slots.stream()
+					.map(TimeSlotDto::getEndTime)
+					.max(LocalTime::compareTo)
+					.orElseThrow();
+
+			// Convert to ZonedDateTime using real time zone
+			ZonedDateTime startDateTime = ZonedDateTime.of(date, earliestStart, zoneId);
+			ZonedDateTime endDateTime = ZonedDateTime.of(date, latestEnd, zoneId);
+
+			// Prepare response DTO
+			AvailabilityResponseDto response = new AvailabilityResponseDto();
+			response.setDate(date);
+			response.setAvailbleTime(slots);
+			response.setStartTime(startDateTime);
+			response.setEndTime(endDateTime);
+
+			responseList.add(response);
+		}
+
+		return responseList;
+	}
+
 
 	private LocalDate getNextValidDate(LocalDate currentDate, DayOfWeek targetDayOfWeek) {
 	    int daysToAdd = targetDayOfWeek.getValue() - currentDate.getDayOfWeek().getValue();
@@ -377,6 +325,52 @@ public class ApiV1CommonController extends BaseController {
 	    }
 	    return currentDate.plusDays(daysToAdd);
 	}
+
+	public Map<LocalDate, List<TimeSlotDto>> generateTimeSlotsInTargetTimeZone(
+			LocalDate currentDate,
+			LocalTime startTime,
+			LocalTime endTime,
+			String convertTimeZone,
+			int durationMinutes
+	) {
+		// Step 1: Define input and target time zones
+		ZoneId utcZone = ZoneId.of("UTC");
+		ZoneId targetZone = ZoneId.of(convertTimeZone);
+
+		// Step 2: Create ZonedDateTime in UTC
+		ZonedDateTime utcStart = ZonedDateTime.of(currentDate, startTime, utcZone);
+		ZonedDateTime utcEnd = ZonedDateTime.of(currentDate, endTime, utcZone);
+
+		// Handle case where end time is before start time (spans midnight)
+		if (utcEnd.isBefore(utcStart)) {
+			utcEnd = utcEnd.plusDays(1);
+		}
+
+		// Step 3: Convert to target timezone
+		ZonedDateTime targetStart = utcStart.withZoneSameInstant(targetZone);
+		ZonedDateTime targetEnd = utcEnd.withZoneSameInstant(targetZone);
+
+		// Step 4: Generate slots and group by local date
+		Map<LocalDate, List<TimeSlotDto>> result = new LinkedHashMap<>();
+		ZonedDateTime current = targetStart;
+
+		while (current.isBefore(targetEnd)) {
+			ZonedDateTime next = current.plusMinutes(durationMinutes);
+			if (next.isAfter(targetEnd)) {
+				next = targetEnd;
+			}
+
+			LocalDate slotDate = current.toLocalDate();
+//			String slot = String.format("%s - %s", current.toLocalTime(), next.toLocalTime());
+			TimeSlotDto temp = new TimeSlotDto(current.toLocalTime(), next.toLocalTime());
+			result.computeIfAbsent(slotDate, k -> new ArrayList<>()).add(temp);
+
+			current = next;
+		}
+
+		return result;
+	}
+
 
 	private List<TimeSlotDto> generateAvailableTimeSlots(LocalDate currentDate, ListenerAvailability slot,
 														 BookedCallDto idRequestDto, String timeZone) {
