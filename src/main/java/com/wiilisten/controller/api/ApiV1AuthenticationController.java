@@ -392,20 +392,26 @@ public class ApiV1AuthenticationController extends BaseController {
 						ApplicationResponseConstants.OTP_EXPIRED, ErrorDataEnum.OTP_EXPIRED.getCode()));
 			}
 
-//			UPDATE USER PROFILE
-			if (otpHistory.getReason().equals(OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue())) {
-				User user = otpHistory.getUser();
-				user.setIsEmailVerified(true);
+			Administration administration = getServiceRegistry().getAdministrationService().findByEmailAndActiveTrue(otpRequest.getEmail());
 
-				if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
-					user.setIsProfileSet(true);
-					user.setNotificationStatus(true);
-					user.setIsLoggedIn(true);
-				} else if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
-					user.setIsLoggedIn(true);
+			if (administration.getRole().equals(ApplicationConstants.SUBADMIN) || administration.getRole().equals(ApplicationConstants.ADMIN)) {
+				// use for admin
+				administration.setIsLoggedIn(true);
+			} else {
+				// use for user
+				if (otpHistory.getReason().equals(OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue())) {
+					User user = otpHistory.getUser();
+					user.setIsEmailVerified(true);
+
+					if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
+						user.setIsProfileSet(true);
+						user.setNotificationStatus(true);
+						user.setIsLoggedIn(true);
+					} else if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
+						user.setIsLoggedIn(true);
+					}
+					getServiceRegistry().getUserService().saveORupdate(user);
 				}
-
-				getServiceRegistry().getUserService().saveORupdate(user);
 			}
 
 //			EXPIRING OTP
@@ -433,7 +439,8 @@ public class ApiV1AuthenticationController extends BaseController {
 		try {
 			String email = otpRequest.getEmail();
 			User user = getServiceRegistry().getUserService().findByEmailAndActiveTrue(email);
-			if (user == null) {
+			Administration administration = getServiceRegistry().getAdministrationService().findByEmailAndActiveTrue(email);
+			if (user == null && administration == null) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(
 						getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.EMAIL_NOT_EXIST.getCode()));
@@ -453,11 +460,19 @@ public class ApiV1AuthenticationController extends BaseController {
 			otpHistory.setExpiryDateTime(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
 			otpHistory.setReason(OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue());
 			otpHistory.setType(OtpTypeEnum.EMAIL.getType());
-			otpHistory.setUser(user);
+			if (user != null) otpHistory.setUser(user);
+
 			getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
 
+			String name = "";
+			if (user != null && !user.getCallName().trim().isEmpty()) {
+				name = user.getCallName();
+			} else if (administration != null && !administration.getName().trim().isEmpty()) {
+				name = administration.getName();
+			}
+
 //			SENDING EMAIL
-			sendEmailVerificationOtpEmail(user.getEmail(), user.getCallName(), otpValue);
+			sendEmailVerificationOtpEmail(email, name, otpValue);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices()
