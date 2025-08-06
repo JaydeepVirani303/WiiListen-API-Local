@@ -1,7 +1,6 @@
 package com.wiilisten.controller.api.listener;
 
-import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -424,7 +423,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			ListnerProfileDTO requestProfileDetails) {
 		listener.setCallMaxDuration(requestProfileDetails.getMaxDuration());
 		listener.setRatePerMinute(Double.valueOf(requestProfileDetails.getPrice()));
-
+		String listenerTimeZone = requestProfileDetails.getTimeZone();
 //		storing new availabilities for new listener
 		if (!user.getIsProfileSet()) {
 			requestProfileDetails.getAvailability().forEach(dayWiseDuty -> {
@@ -462,21 +461,35 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 //			creating new availabilities
 			requestProfileDetails.getAvailability().forEach(dayWiseDuty -> {
+				LOGGER.info("Processing availability for day: {}", dayWiseDuty.getDay());
 
 				dayWiseDuty.getDutyTimings().forEach(dutyTiming -> {
+					LOGGER.info("Original StartTime: {}, EndTime: {} (Timezone: {})", dutyTiming.getStartTime(), dutyTiming.getEndTime(), listenerTimeZone);
+
 					ListenerAvailability listenerAvailability = new ListenerAvailability();
 					listenerAvailability.setUser(user);
 					listenerAvailability.setWeekDay(dayWiseDuty.getDay());
-					listenerAvailability.setStartTime(ApplicationUtils.StringToLocalTime(dutyTiming.getStartTime(),
-							ApplicationConstants.TIME_FORMAT_HH_MM));
-					listenerAvailability.setEndTime(ApplicationUtils.StringToLocalTime(dutyTiming.getEndTime(),
-							ApplicationConstants.TIME_FORMAT_HH_MM));
+
+					LocalTime startLocalTime = ApplicationUtils.StringToLocalTime(
+							dutyTiming.getStartTime(), ApplicationConstants.TIME_FORMAT_HH_MM);
+					LocalTime endLocalTime = ApplicationUtils.StringToLocalTime(
+							dutyTiming.getEndTime(), ApplicationConstants.TIME_FORMAT_HH_MM);
+
+					LOGGER.debug("Parsed LocalTime - Start: {}, End: {}", startLocalTime, endLocalTime);
+
+					// Convert to UTC
+					LocalTime startUTC = convertLocalTimeToUTC(startLocalTime, listenerTimeZone);
+					LocalTime endUTC = convertLocalTimeToUTC(endLocalTime, listenerTimeZone);
+
+					LOGGER.info("Converted to UTC - Start: {}, End: {}", startUTC, endUTC);
+
+					listenerAvailability.setStartTime(startUTC);
+					listenerAvailability.setEndTime(endUTC);
 					listenerAvailability.setActive(true);
 
 					getServiceRegistry().getListenerAvailabilityService().saveORupdate(listenerAvailability);
-
+					LOGGER.info("Saved listener availability for {} - Start: {}, End: {}", dayWiseDuty.getDay(), startUTC, endUTC);
 				});
-
 			});
 		}
 
@@ -489,6 +502,30 @@ public class ApiV1ListenerProfileController extends BaseController {
 		listener = getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 
 		return listener;
+	}
+
+
+	public static LocalTime convertLocalTimeToUTC(LocalTime localTime, String timeZone) {
+		LOGGER.info("Starting conversion of localTime '{}' from timezone '{}'", localTime, timeZone);
+
+		if (localTime == null || timeZone == null || timeZone.isEmpty()) {
+			LOGGER.error("Invalid input: localTime='{}', timeZone='{}'", localTime, timeZone);
+			throw new IllegalArgumentException("Invalid input time or time zone");
+		}
+
+		LocalDateTime localDateTime = LocalDateTime.of(LocalDate.now(), localTime);
+		LOGGER.debug("Constructed LocalDateTime: {}", localDateTime);
+
+		ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.of(timeZone));
+		LOGGER.debug("ZonedDateTime in original timezone ({}): {}", timeZone, zonedDateTime);
+
+		ZonedDateTime utcDateTime = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+		LOGGER.debug("Converted ZonedDateTime in UTC: {}", utcDateTime);
+
+		LocalTime utcLocalTime = utcDateTime.toLocalTime();
+		LOGGER.info("Final UTC time: {}", utcLocalTime);
+
+		return utcLocalTime;
 	}
 
 	/**
