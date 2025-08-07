@@ -50,4 +50,5 @@ public class ListenerAvailability {
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
 
+	private String timeZone;
 }

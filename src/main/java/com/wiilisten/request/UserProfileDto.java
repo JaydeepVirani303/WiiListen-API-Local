@@ -148,5 +148,7 @@ public class UserProfileDto {
 	
 	@JsonProperty("is_account_swittched")
 	private Boolean isAccountSwittched;
+
+	private String timeZone;
 	
 }
