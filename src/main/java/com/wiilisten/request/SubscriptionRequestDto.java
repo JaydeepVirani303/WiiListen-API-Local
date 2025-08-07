@@ -28,4 +28,5 @@ public class SubscriptionRequestDto {
 	@JsonProperty("deviceOs")
 	private String deviceOs;
 
+	private int durationInDays;
 }

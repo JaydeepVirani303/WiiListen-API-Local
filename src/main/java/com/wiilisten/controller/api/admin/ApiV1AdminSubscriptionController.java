@@ -2,6 +2,7 @@ package com.wiilisten.controller.api.admin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,19 @@ public class ApiV1AdminSubscriptionController extends BaseController {
 			subscription.setActive(true);
 			subscription.setIsDeleted(false);
 			subscription.setCategory(ApplicationConstants.SUBSCRIPTION);
+			subscription.setDurationInDays(subscriptionRequestDto.getDurationInDays());
+			// if value is not added from front end
+			if (subscriptionRequestDto.getDurationInDays() == 0) {
+				Map<String, Integer> durationMap = Map.of(
+						ApplicationConstants.MONTHLY, 30,
+						ApplicationConstants.YEARLY, 365,
+						ApplicationConstants.WEEKLY, 7
+				);
+
+				String type = subscriptionRequestDto.getType();
+				int duration = durationMap.getOrDefault(type, 0);
+				subscription.setDurationInDays(duration);
+			}
 			getServiceRegistry().getSubscriptionService().saveORupdate(subscription);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
@@ -121,6 +135,19 @@ public class ApiV1AdminSubscriptionController extends BaseController {
 			}
 			BeanUtils.copyProperties(subscriptionRequestDto, subscription,
 					getCommonServices().getNullPropertyNames(subscriptionRequestDto));
+			subscription.setDurationInDays(subscriptionRequestDto.getDurationInDays());
+			// if value is not added from front end
+			if (subscriptionRequestDto.getDurationInDays() == 0) {
+				Map<String, Integer> durationMap = Map.of(
+						ApplicationConstants.MONTHLY, 30,
+						ApplicationConstants.YEARLY, 365,
+						ApplicationConstants.WEEKLY, 7
+				);
+
+				String type = subscriptionRequestDto.getType();
+				int duration = durationMap.getOrDefault(type, 0);
+				subscription.setDurationInDays(duration);
+			}
 			getServiceRegistry().getSubscriptionService().saveORupdate(subscription);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);

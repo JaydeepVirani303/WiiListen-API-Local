@@ -45,4 +45,6 @@ public class Subscription {
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
 
+	private Integer durationInDays;
+
 }

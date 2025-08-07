@@ -187,6 +187,18 @@ public class ApiV1StripePaymentController extends BaseController {
 		// }
 
 		User user = getLoggedInUser();
+
+		// Check if user already has an active subscription of same type that is not expired
+		UserSubscription existingSubscription = getServiceRegistry().getUserSubscriptionService()
+				.findTopByUserAndTypeAndActiveTrueOrderByIdDesc(user, idRequestDto.getType());
+
+		if (existingSubscription != null && existingSubscription.getExpiryDate() != null &&
+				existingSubscription.getExpiryDate().isAfter(LocalDateTime.now())) {
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices()
+					.generateSuccessResponseWithMessageKey(SuccessMsgEnum.PLAN_ALREADY_SUBSCRIBED.getCode()));
+		}
+
 		if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 			CallerProfile callerProfile = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
 			if (callerProfile.getSearchSubscriptionStatus().equalsIgnoreCase(ApplicationConstants.ACTIVE)) {
@@ -225,6 +237,8 @@ public class ApiV1StripePaymentController extends BaseController {
 		userSubscription.setSubscription(subscription);
 		userSubscription.setType(idRequestDto.getType());
 		userSubscription.setActive(true);
+		int duration = subscription.getDurationInDays() != null ? subscription.getDurationInDays() : 0;
+		userSubscription.setExpiryDate(LocalDateTime.now().plusDays(duration));
 		getServiceRegistry().getUserSubscriptionService().saveORupdate(userSubscription);
 
 		List<User> users = getServiceRegistry().getUserService()

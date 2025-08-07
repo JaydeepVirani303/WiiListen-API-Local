@@ -1,5 +1,6 @@
 package com.wiilisten.entity;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -43,4 +44,5 @@ public class UserSubscription {
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
 
+	private LocalDateTime expiryDate;
 }
