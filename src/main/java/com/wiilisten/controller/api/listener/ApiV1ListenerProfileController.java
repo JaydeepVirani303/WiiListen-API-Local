@@ -431,6 +431,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 				dayWiseDuty.getDutyTimings().forEach(dutyTiming -> {
 
 					ListenerAvailability listenerAvailability = new ListenerAvailability();
+					listenerAvailability.setTimeZone(listenerTimeZone);
 					listenerAvailability.setUser(user);
 					listenerAvailability.setWeekDay(dayWiseDuty.getDay());
 					listenerAvailability.setStartTime(ApplicationUtils.StringToLocalTime(dutyTiming.getStartTime(),
@@ -469,7 +470,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 					ListenerAvailability listenerAvailability = new ListenerAvailability();
 					listenerAvailability.setUser(user);
 					listenerAvailability.setWeekDay(dayWiseDuty.getDay());
-
+					listenerAvailability.setTimeZone(listenerTimeZone);
 					LocalTime startLocalTime = ApplicationUtils.StringToLocalTime(
 							dutyTiming.getStartTime(), ApplicationConstants.TIME_FORMAT_HH_MM);
 					LocalTime endLocalTime = ApplicationUtils.StringToLocalTime(
@@ -486,7 +487,6 @@ public class ApiV1ListenerProfileController extends BaseController {
 					listenerAvailability.setStartTime(startUTC);
 					listenerAvailability.setEndTime(endUTC);
 					listenerAvailability.setActive(true);
-
 					getServiceRegistry().getListenerAvailabilityService().saveORupdate(listenerAvailability);
 					LOGGER.info("Saved listener availability for {} - Start: {}, End: {}", dayWiseDuty.getDay(), startUTC, endUTC);
 				});

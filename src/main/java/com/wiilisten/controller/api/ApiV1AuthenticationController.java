@@ -566,7 +566,7 @@ public class ApiV1AuthenticationController extends BaseController {
 						.findByUserAndActiveTrue(user);
 				if (listener != null) {
 					response.setProfileId(listener.getId());
-					response.setIsAdvertisementActive(listener.getIsAdvertisementActive());;
+					response.setIsAdvertisementActive(listener.getIsAdvertisementActive());
 				}
 					
 				if (listener.getIsEligibleForPremiumCallSearch() != null
@@ -598,6 +598,7 @@ public class ApiV1AuthenticationController extends BaseController {
 
 			}
 			response.setId(user.getId());
+			response.setTimeZone(user.getTimeZone());
 			response.setIsAccountSwittched(getCommonServices().isAccountSwitched(user));
 			
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
