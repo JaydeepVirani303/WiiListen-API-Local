@@ -365,71 +365,112 @@ public class ApiV1AuthenticationController extends BaseController {
 //	}
 
 	@PostMapping(ApplicationURIConstants.VERIFY_OTP)
-	public ResponseEntity<Object> verifyOtp(@RequestBody final UserOtpDTO otpRequest) {
+	public ResponseEntity<Object> verifyOTP(@RequestBody final UserOtpDTO otpRequest) {
 
-		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+		LOGGER.info("=== ENTER: verifyOtp ===");
+		LOGGER.info("Received OTP verification request for email: {}", otpRequest.getEmail());
 
 		try {
-
+			// Fetch OTP history
 			OtpHistory otpHistory = getServiceRegistry().getOtpHistoryService()
 					.findByEmailAndOtpAndActiveTrue(otpRequest.getEmail(), otpRequest.getOtp());
+
 			if (otpHistory == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity
-						.ok(getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_OTP.getCode()));
+				LOGGER.info("OTP not found or inactive for email: {}", otpRequest.getEmail());
+				LOGGER.info("=== EXIT: verifyOtp ===");
+				return ResponseEntity.ok(
+						getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_OTP.getCode()));
 			}
 
-//			OTP EXPIRY CHECK
+			// Check expiry
 			if (LocalDateTime.now(ZoneOffset.UTC).isAfter(otpHistory.getExpiryDateTime())) {
+				LOGGER.info("OTP expired for email: {}", otpRequest.getEmail());
 
 				otpHistory.setIsExpired(true);
 				otpHistory.setIsUtilized(false);
 				otpHistory.setActive(false);
 				getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
 
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+				LOGGER.info("=== EXIT: verifyOtp ===");
 				return ResponseEntity.ok(getCommonServices().generateResponseWithCodeAndMessage(
 						ApplicationResponseConstants.OTP_EXPIRED, ErrorDataEnum.OTP_EXPIRED.getCode()));
 			}
 
-			Administration administration = getServiceRegistry().getAdministrationService().findByEmailAndActiveTrue(otpRequest.getEmail());
+			// Fetch associated accounts
+			Administration administration = getServiceRegistry().getAdministrationService()
+					.findByEmailAndActiveTrue(otpRequest.getEmail());
+			User currentUser = getServiceRegistry().getUserService()
+					.findByEmailAndActiveTrue(otpRequest.getEmail());
 
-			if (administration.getRole().equals(ApplicationConstants.SUBADMIN) || administration.getRole().equals(ApplicationConstants.ADMIN)) {
-				// use for admin
-				administration.setIsLoggedIn(true);
-			} else {
-				// use for user
-				if (otpHistory.getReason().equals(OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue())) {
-					User user = otpHistory.getUser();
-					user.setIsEmailVerified(true);
+			if (administration != null || currentUser != null) {
 
-					if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
-						user.setIsProfileSet(true);
-						user.setNotificationStatus(true);
-						user.setIsLoggedIn(true);
-					} else if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
-						user.setIsLoggedIn(true);
+				if (administration != null &&
+						(ApplicationConstants.SUBADMIN.equals(administration.getRole()) ||
+								ApplicationConstants.ADMIN.equals(administration.getRole()))) {
+
+					LOGGER.info("OTP verification for Admin/Subadmin: {}", administration.getEmail());
+
+					if (OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue().equals(otpHistory.getReason())) {
+						if (otpHistory.getOtp().equals(otpRequest.getOtp())) {
+							administration.setIsLoggedIn(true);
+							LOGGER.info("Admin login successful for email: {}", administration.getEmail());
+						} else {
+							LOGGER.info("Invalid OTP for admin email: {}", administration.getEmail());
+							return ResponseEntity.ok(getCommonServices().generateResponseWithCodeAndMessage(
+									ApplicationResponseConstants.INVALID_OTP, ErrorDataEnum.INVALID_OTP.getCode()));
+						}
 					}
-					getServiceRegistry().getUserService().saveORupdate(user);
+
+				} else {
+					LOGGER.info("OTP verification for User: {}", otpRequest.getEmail());
+
+					if (OtpReasonEnum.EMAIL_OTP_FOR_SIGNUP.getValue().equals(otpHistory.getReason())) {
+						User user = otpHistory.getUser();
+
+						if (otpHistory.getOtp().equals(otpRequest.getOtp())) {
+							user.setIsEmailVerified(true);
+
+							if (UserRoleEnum.CALLER.getRole().equals(user.getRole())) {
+								user.setIsProfileSet(true);
+								user.setNotificationStatus(true);
+								user.setIsLoggedIn(true);
+							} else if (UserRoleEnum.LISTENER.getRole().equals(user.getRole())) {
+								user.setIsLoggedIn(true);
+							}
+
+							getServiceRegistry().getUserService().saveORupdate(user);
+							LOGGER.info("User login successful for email: {}", user.getEmail());
+						} else {
+							LOGGER.info("Invalid OTP for user email: {}", otpRequest.getEmail());
+							return ResponseEntity.ok(getCommonServices().generateResponseWithCodeAndMessage(
+									ApplicationResponseConstants.INVALID_OTP, ErrorDataEnum.INVALID_OTP.getCode()));
+						}
+					}
 				}
+
+				// Mark OTP as used and expired
+				otpHistory.setIsUtilized(true);
+				otpHistory.setActive(false);
+				otpHistory.setIsExpired(true);
+				getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
+
+				LOGGER.info("OTP successfully verified for email: {}", otpRequest.getEmail());
+				LOGGER.info("=== EXIT: verifyOtp ===");
+				return ResponseEntity.ok(getCommonServices()
+						.generateSuccessResponseWithMessageKey(SuccessMsgEnum.OTP_VERIFIED.getCode()));
 			}
 
-//			EXPIRING OTP
-			otpHistory.setIsUtilized(true);
-			otpHistory.setActive(false);
-			otpHistory.setIsExpired(true); // expiring OTP after usage
-			getServiceRegistry().getOtpHistoryService().saveORupdate(otpHistory);
-
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
-			return ResponseEntity.ok(
-					getCommonServices().generateSuccessResponseWithMessageKey(SuccessMsgEnum.OTP_VERIFIED.getCode()));
+			LOGGER.error("No matching user or admin found for email: {}", otpRequest.getEmail());
+			return ResponseEntity.ok(getCommonServices().generateResponseWithCodeAndMessage(
+					ApplicationResponseConstants.NO_DATA_FOUND, ErrorDataEnum.NO_DATA_FOUND.getCode()));
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			LOGGER.error("Exception while verifying OTP for email: {}", otpRequest.getEmail(), e);
+			LOGGER.info("=== EXIT: verifyOtp ===");
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
 
 	@PostMapping(ApplicationURIConstants.SEND_OTP)
 	public ResponseEntity<Object> sendOtp(@RequestBody final SendOtpDto otpRequest) throws MessagingException {
