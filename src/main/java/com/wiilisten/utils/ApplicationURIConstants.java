@@ -128,6 +128,8 @@ public class ApplicationURIConstants {
 	public static final String PUSH_NOTIFICATION_SEND ="https://fcm.googleapis.com/fcm/send";
 	
 	public static final String PAYMENT_INTENT = "/payment-intent";
+
+	public static final String REPORT = "/report";
 	private ApplicationURIConstants() {
 
 	}
