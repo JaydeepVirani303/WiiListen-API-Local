@@ -15,6 +15,7 @@ public class CombinedCallerUserDTO {
     private String referralCode;
     private String searchSubscriptionStatus;
     private Boolean active;
+
     // User fields
     private Long userId;
     private String email;
@@ -39,19 +40,21 @@ public class CombinedCallerUserDTO {
                 .referralCode(callerProfile.getReferralCode())
                 .searchSubscriptionStatus(callerProfile.getSearchSubscriptionStatus())
                 .active(callerProfile.getActive())
-                .userId(user.getId())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .callName(user.getCallName())
-                .profilePicture(user.getProfilePicture())
-                .countryCode(user.getCountryCode())
-                .contactNumber(user.getContactNumber())
-                .totalReviews(user.getTotalReviews())
-                .currentRating(user.getCurrentRating())
-                .isProfileSet(user.getIsProfileSet())
-                .isEmailVerified(user.getIsEmailVerified())
-                .isSuspended(user.getIsSuspended())
-                .timeZone(user.getTimeZone())
+
+                // Null-safe user mapping
+                .userId(user != null ? user.getId() : null)
+                .email(user != null ? user.getEmail() : null)
+                .role(user != null ? user.getRole() : null)
+                .callName(user != null ? user.getCallName() : null)
+                .profilePicture(user != null ? user.getProfilePicture() : null)
+                .countryCode(user != null ? user.getCountryCode() : null)
+                .contactNumber(user != null ? user.getContactNumber() : null)
+                .totalReviews(user != null ? user.getTotalReviews() : null)
+                .currentRating(user != null ? user.getCurrentRating() : null)
+                .isProfileSet(user != null ? user.getIsProfileSet() : null)
+                .isEmailVerified(user != null ? user.getIsEmailVerified() : null)
+                .isSuspended(user != null ? user.getIsSuspended() : null)
+                .timeZone(user != null ? user.getTimeZone() : null)
                 .build();
     }
 }

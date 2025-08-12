@@ -16,7 +16,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping(value = ApplicationURIConstants.API + ApplicationURIConstants.V1 + ApplicationURIConstants.ADMIN + ApplicationURIConstants.REPORT)
-public class ReportDownloadController extends BaseController {
+public class ApiV1AdminReportDownloadController extends BaseController {
     private static final Logger LOGGER = LoggerFactory.getLogger(CallerReportServiceImpl.class);
 
     /**
@@ -58,8 +58,25 @@ public class ReportDownloadController extends BaseController {
      * @return ResponseEntity containing the Excel file as an attachment
      */
     @GetMapping(ApplicationURIConstants.LISTENER)
-    public ResponseEntity<?> downloadListenerReport() throws IOException {
-        return null;
+    public ResponseEntity<FileDownloadResponseDto> downloadListenerReport() throws IOException {
+        FileDownloadResponseDto listenerProfileList = new FileDownloadResponseDto();
+        try {
+            LOGGER.info("Listener report download request received.");
+
+            listenerProfileList =
+                    getServiceRegistry().getListenerReportService().getReportOfAllListener();
+
+            LOGGER.info("Listener report generated successfully: {}", listenerProfileList.getFileName());
+            return ResponseEntity.ok(listenerProfileList);
+
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error while downloading caller report: {}", e.getMessage(), e);
+            FileDownloadResponseDto errorResponse = FileDownloadResponseDto.builder()
+                    .message("Unexpected error occurred: " + e.getMessage()).build();
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse);
+        }
     }
 
     /**
