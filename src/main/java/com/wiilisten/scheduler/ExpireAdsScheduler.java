@@ -1,5 +1,6 @@
 package com.wiilisten.scheduler;
 
+import com.wiilisten.controller.BaseController;
 import com.wiilisten.entity.CallerProfile;
 import com.wiilisten.entity.ListenerProfile;
 import com.wiilisten.entity.User;
@@ -19,7 +20,7 @@ import java.util.List;
 
 @Component
 
-public class ExpireAdsScheduler {
+public class ExpireAdsScheduler extends BaseController {
     private final static Logger LOGGER = LoggerFactory.getLogger(ExpireAdsScheduler.class);
     @Autowired
     private ServiceRegistry serviceRegistry;
@@ -53,10 +54,13 @@ public class ExpireAdsScheduler {
             User user = ad.getUser();
             if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
                 ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService().findByUserAndActiveTrue(user);
+                listenerProfile.setIsAdvertisementActive(false);
                 listenerProfile.setIsEligibleForPremiumCallSearch(false);
+                getServiceRegistry().getListenerProfileService().saveORupdate(listenerProfile);
             } else if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
                 CallerProfile callerProfile = serviceRegistry.getCallerProfileService().findByUserAndActiveTrue(user);
                 callerProfile.setSearchSubscriptionStatus(ApplicationConstants.EXPIRED);
+                getServiceRegistry().getCallerProfileService().saveORupdate(callerProfile);
             }
         }
         LOGGER.info("ExpireAdsScheduler::expireAdvertisements Completed");
