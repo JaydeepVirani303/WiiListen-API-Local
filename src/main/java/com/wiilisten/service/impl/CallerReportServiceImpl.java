@@ -37,24 +37,24 @@ public class CallerReportServiceImpl extends BaseServiceImpl<CallerProfile, Long
 
     @Override
     public List<CallerProfile> getAllCallers() {
-        LOGGER.debug("Fetching all caller profiles from repository...");
+        LOGGER.info("Fetching all caller profiles from repository...");
         List<CallerProfile> callers = getDaoFactory().getCallerProfileRepository().findAll();
         LOGGER.info("Fetched {} caller profiles.", callers.size());
         return callers;
     }
 
     @Override
-    public FileDownloadResponseDto getReportOfAllCaller() throws IOException {
+    public byte[] getReportOfAllCaller() throws IOException {
         LOGGER.info("Starting generation of Caller Report Excel file...");
         // Step 1: Fetch caller profiles
         List<CallerProfile> callerProfileList = getAllCallers();
 
         // Step 2: Map to DTOs
-        LOGGER.debug("Mapping {} caller profiles to CombinedCallerUserDTO...", callerProfileList.size());
+        LOGGER.info("Mapping {} caller profiles to CombinedCallerUserDTO...", callerProfileList.size());
         List<CombinedCallerUserDTO> dtoList = callerProfileList.stream()
                 .map(CombinedCallerUserDTO::toDTO)
                 .toList();
 
-        return excelGenerator.generateExcelReport(dtoList, "caller_report");
+        return excelGenerator.generateExcelReport(dtoList);
     }
 }
