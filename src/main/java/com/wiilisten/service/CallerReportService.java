@@ -9,5 +9,5 @@ import java.util.List;
 public interface CallerReportService extends BaseService<CallerProfile, Long> {
     public List<CallerProfile> getAllCallers();
 
-    public FileDownloadResponseDto getReportOfAllCaller() throws IOException;
+    public byte[] getReportOfAllCaller() throws IOException;
 }
