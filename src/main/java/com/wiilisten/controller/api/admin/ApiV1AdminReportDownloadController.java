@@ -48,7 +48,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
             String fileName = generateTimestampedFileName("caller_report");
             LOGGER.debug("Caller report file name generated: {}", fileName);
 
-            LOGGER.info("Caller report generated successfully. Sending file to client.");
+            LOGGER.info("Caller report generated successfully. Sending file.");
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -83,7 +83,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
             String fileName = generateTimestampedFileName("listener_report");
             LOGGER.info("Listener report file name generated: {}", fileName);
 
-            LOGGER.info("Listener report generated successfully. Sending file to client.");
+            LOGGER.info("Listener report generated successfully. Sending file.");
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                     .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -103,10 +103,31 @@ public class ApiV1AdminReportDownloadController extends BaseController {
      * @throws IOException if file generation fails
      */
     @GetMapping(ApplicationURIConstants.PAYMENT)
-    public ResponseEntity<?> downloadPaymentReport() throws IOException {
-        LOGGER.info("Payment report download API called but not yet implemented.");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Payment report generation is not implemented yet.");
+    public ResponseEntity<byte[]> downloadPaymentReport() throws IOException {
+
+        byte[] paymentReport = null;
+        try {
+            LOGGER.info("payment report download request received.");
+
+            // Fetch data and generate report from service layer
+            paymentReport = getServiceRegistry()
+                    .getPaymentReportService()
+                    .getReportOfAllPayment();
+
+            // Create timestamped file name for download
+            String fileName = generateTimestampedFileName("payment_report");
+            LOGGER.info("Payment report file name generated: {}", fileName);
+
+            LOGGER.info("Payment report generated successfully. Sending file.");
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                    .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .body(paymentReport);
+
+        } catch (Exception e) {
+            LOGGER.error("Error while generating Listener report: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(paymentReport);
+        }
     }
 
     /**
