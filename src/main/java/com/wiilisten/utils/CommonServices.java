@@ -316,6 +316,10 @@ public class CommonServices {
 		return serviceRegistry.getTrainingMaterialService().countByContentTypeAndActiveTrue("TRAINING");
 	}
 
+	public Long getCountOfListenerAndTrainingVideos() {
+		return serviceRegistry.getTrainingMaterialService().countByContentTypeAndSubCategoryAndActiveTrue("TRAINING", "LISTENER");
+	}
+
 	/**
 	 * This method used to check for unique username
 	 * 

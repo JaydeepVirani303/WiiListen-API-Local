@@ -18,6 +18,14 @@ public interface TrainingMaterialRepository extends BaseRepository<TrainingMater
 	List<TrainingMaterial> findByContentTypeAndSubCategoryAndActiveTrue(@Param("contentType") String contentType,
 																		@Param("subCategory") String subCategory);
 
+	@Query("SELECT COUNT(tm) FROM TrainingMaterial tm " +
+			"WHERE tm.active = true " +
+			"AND (:contentType IS NULL OR tm.contentType = :contentType) " +
+			"AND (:subCategory IS NULL OR tm.subCategory = :subCategory)")
+	Long countByContentTypeAndSubCategoryAndActiveTrue(@Param("contentType") String contentType,
+													   @Param("subCategory") String subCategory);
+
+
 	Long countByContentTypeAndActiveTrue(String contentType);
 	
 	TrainingMaterial findByIdAndActiveTrue(Long id);
