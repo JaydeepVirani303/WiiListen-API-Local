@@ -23,6 +23,11 @@ public class TrainingMaterialServiceImpl extends BaseServiceImpl<TrainingMateria
 	}
 
 	@Override
+	public Long countByContentTypeAndSubCategoryAndActiveTrue(String contentType, String subCategory) {
+		return getDaoFactory().getTrainingMaterialRepository().countByContentTypeAndSubCategoryAndActiveTrue(contentType, subCategory);
+	}
+
+	@Override
 	public Long countByContentTypeAndActiveTrue(String string) {
 		return getDaoFactory().getTrainingMaterialRepository().countByContentTypeAndActiveTrue(string);
 	}

@@ -8,6 +8,9 @@ public interface TrainingMaterialService extends BaseService<TrainingMaterial, L
 
 	List<TrainingMaterial> findByContentTypeAndSubCategoryAndActiveTrue(String contentType, String subCategory);
 
+	Long countByContentTypeAndSubCategoryAndActiveTrue(String contentType, String subCategory);
+
+
 	Long countByContentTypeAndActiveTrue(String contentType);
 	
 	TrainingMaterial findByIdAndActiveTrue(Long id);

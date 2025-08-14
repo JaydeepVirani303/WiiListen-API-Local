@@ -157,7 +157,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 				listener.setCurrentTrainingVideo(Long.parseLong(requestProfileDetails.getVideoProgress()));
 				listener.setTrainingVideoProgress(
-						(listener.getCurrentTrainingVideo() == getCommonServices().getCountOfTrainingVideos())
+						(listener.getCurrentTrainingVideo() == getCommonServices().getCountOfListenerAndTrainingVideos())
 								? TrainingVideoProgressStatusEnum.COMPLETED.getStatus()
 								: TrainingVideoProgressStatusEnum.PENDING.getStatus());
 
