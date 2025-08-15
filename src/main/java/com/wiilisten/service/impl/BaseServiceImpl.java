@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 
+import com.wiilisten.utils.ServiceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 
@@ -19,8 +20,8 @@ public class BaseServiceImpl<T, ID extends Serializable> implements BaseService<
 	@Autowired
     private DaoFactory daoFactory;
 
-//    @Autowired
-//    private ServiceRegistry serviceRegistry;
+    @Autowired
+    private ServiceRegistry serviceRegistry;
 
 	protected BaseRepository<T, ID> baseRepository;
 

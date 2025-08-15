@@ -1,12 +1,12 @@
 package com.wiilisten.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.Query;
 
 import com.wiilisten.entity.ListenerProfile;
 import com.wiilisten.entity.User;
@@ -91,6 +91,6 @@ public interface ListenerProfileService extends BaseService<ListenerProfile, Lon
 
     List<ListenerProfile> findAllByActiveAndAppActiveStatusAndUserNotIn(Boolean true1, Boolean true2,
             List<Long> listenerIds);
-	
 
+	public List<ListenerProfile> findActiveProfilesBetweenDates(LocalDateTime startDate, LocalDateTime endDate);
 }

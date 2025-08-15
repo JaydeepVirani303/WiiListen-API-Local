@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -163,5 +165,17 @@ public class ExcelGenerator {
 
         LOGGER.info("Excel file generated successfully. File size: {} bytes.", fileBytes.length);
         return fileBytes;
+    }
+
+    /**
+     * Utility method to generate a timestamped file name.
+     *
+     * @param baseName base name of the file without extension
+     * @return timestamped file name with .xlsx extension
+     */
+    public String generateTimestampedFileName(String baseName) {
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        return baseName + "_" + timestamp + ".xlsx";
     }
 }

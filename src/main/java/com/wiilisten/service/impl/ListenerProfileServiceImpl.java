@@ -1,6 +1,7 @@
 package com.wiilisten.service.impl;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -220,6 +221,11 @@ public class ListenerProfileServiceImpl extends BaseServiceImpl<ListenerProfile,
 	public List<ListenerProfile> findAllByActiveAndAppActiveStatusAndUserNotIn(Boolean true1, Boolean true2,
 			List<Long> listenerIds) {
 		return getDaoFactory().getListenerProfileRepository().findByActiveAndAppActiveStatusAndUserIdNotIn(true1, true2, listenerIds);
+	}
+
+	@Override
+	public List<ListenerProfile> findActiveProfilesBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
+		return getDaoFactory().getListenerProfileRepository().findActiveProfilesByCreatedAtBetween(startDate, endDate);
 	}
 
 }
