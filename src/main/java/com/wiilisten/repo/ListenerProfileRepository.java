@@ -1,12 +1,13 @@
 package com.wiilisten.repo;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.wiilisten.entity.ListenerProfile;
@@ -100,5 +101,16 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 
     List<ListenerProfile> findByActiveAndAppActiveStatusAndUserIdNotIn(Boolean true1, Boolean true2,
             List<Long> listenerIds);
+
+	@Query("SELECT lp FROM ListenerProfile lp " +
+			"WHERE lp.active = true " +
+			"AND lp.createdAt >= :startDate " +
+			"AND lp.createdAt <= :endDate " +
+			"ORDER BY lp.id")
+	List<ListenerProfile> findActiveProfilesByCreatedAtBetween(
+			@Param("startDate") LocalDateTime startDate,
+			@Param("endDate") LocalDateTime endDate
+	);
+
 
 }

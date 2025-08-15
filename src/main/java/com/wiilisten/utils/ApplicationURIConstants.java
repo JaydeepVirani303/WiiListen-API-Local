@@ -130,6 +130,8 @@ public class ApplicationURIConstants {
 	public static final String PAYMENT_INTENT = "/payment-intent";
 
 	public static final String REPORT = "/report";
+	public static final String DOWNLOAD_ZIP = "/download-zip";
+
 	private ApplicationURIConstants() {
 
 	}

@@ -23,12 +23,6 @@ public class CallerReportServiceImpl extends BaseServiceImpl<CallerProfile, Long
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CallerReportServiceImpl.class);
 
-    private final ExcelGenerator excelGenerator;
-
-    public CallerReportServiceImpl(ExcelGenerator excelGenerator) {
-        this.excelGenerator = excelGenerator;
-    }
-
     @PostConstruct
     public void setBaseRepository() {
         super.baseRepository = getDaoFactory().getCallerProfileRepository();
@@ -55,6 +49,6 @@ public class CallerReportServiceImpl extends BaseServiceImpl<CallerProfile, Long
                 .map(CombinedCallerUserDTO::toDTO)
                 .toList();
 
-        return excelGenerator.generateExcelReport(dtoList);
+        return getServiceRegistry().getExcelGenerator().generateExcelReport(dtoList);
     }
 }
