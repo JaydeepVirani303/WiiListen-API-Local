@@ -2,13 +2,10 @@ package com.wiilisten.controller.api;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.response.PlanPurchaseDetailResponseDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -26,14 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.AdminModulePermission;
-import com.wiilisten.entity.Administration;
-import com.wiilisten.entity.AdministrativeNotification;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.ListenerBankDetails;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.OtpHistory;
-import com.wiilisten.entity.User;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.OtpReasonEnum;
 import com.wiilisten.enums.OtpTypeEnum;
@@ -598,10 +587,32 @@ public class ApiV1AuthenticationController extends BaseController {
 				return ResponseEntity.ok(
 						getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
 			}
-
 			UserProfileDto response = new UserProfileDto();
-			BeanUtils.copyProperties(user, response);
 
+
+			List<UserSubscription> userSubscriptions = getServiceRegistry()
+					.getUserSubscriptionService()
+					.findAllByUserAndActiveTrue(user);
+
+			if (userSubscriptions != null && !userSubscriptions.isEmpty()) {
+				// Latest first
+				List<PlanPurchaseDetailResponseDto> planDetails = new ArrayList<>();
+				for (UserSubscription sub : userSubscriptions) {
+					if (sub.getSubscription() != null && sub.getCreatedAt() != null) {
+						PlanPurchaseDetailResponseDto planPurchaseDetailResponseDto = new PlanPurchaseDetailResponseDto(
+								sub.getCreatedAt(),
+								sub.getSubscription().getDurationInDays(),
+								sub.getType()
+						);
+						planDetails.add(planPurchaseDetailResponseDto);
+					}
+				}
+				planDetails.sort(Comparator.comparing(PlanPurchaseDetailResponseDto::getPurchaseDate).reversed());
+
+				response.setPurchasedPlansDetail(planDetails);
+			}
+
+			BeanUtils.copyProperties(user, response);
 			if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
 				ListenerProfile listener = getServiceRegistry().getListenerProfileService()
 						.findByUserAndActiveTrue(user);
