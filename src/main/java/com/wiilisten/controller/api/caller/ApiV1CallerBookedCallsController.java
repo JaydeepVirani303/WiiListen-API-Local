@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.wiilisten.entity.*;
 import org.checkerframework.checker.units.qual.s;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,17 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.ListenerAvailability;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.NotificationHistory;
-import com.wiilisten.entity.User;
 import com.wiilisten.enums.SuccessMsgEnum;
-import com.wiilisten.request.BookedCallDto;
 import com.wiilisten.request.PaginationAndSortingDetails;
-import com.wiilisten.request.TimeSlotDto;
-import com.wiilisten.response.AvailabilityResponseDto;
 import com.wiilisten.response.BookedCallDetailsDto;
 import com.wiilisten.utils.ApplicationConstants;
 import com.wiilisten.utils.ApplicationURIConstants;
@@ -258,6 +249,9 @@ public class ApiV1CallerBookedCallsController extends BaseController {
 
 			bookedcalls.setPaymentIntent(bookedCallDetailsDto.getPaymentIntent());
 			bookedcalls.setSponsored(bookedCallDetailsDto.getSponsored());
+			//TODO : first commission row is fetching always here. need to do it dynamic.
+			CommissionRate commissionRate = getServiceRegistry().getCommissionRateService().findFirstByOrderByIdAsc();
+			bookedcalls.setAdminCommissionRate(commissionRate.getRate());
 			getServiceRegistry().getBookedCallsService().saveORupdate(bookedcalls);
 
 			// send notification in app for booking request.

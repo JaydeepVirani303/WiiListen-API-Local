@@ -19,4 +19,10 @@ public class CommissionRateServiceImpl extends BaseServiceImpl<CommissionRate, L
 	public CommissionRate findByActiveTrue() {
 		return getDaoFactory().getCommissionRateRepository().findByActiveTrue();
 	}
+
+    @Override
+    public CommissionRate findFirstByOrderByIdAsc() {
+        return getDaoFactory().getCommissionRateRepository().findFirstByOrderByIdAsc();
+    }
+
 }
