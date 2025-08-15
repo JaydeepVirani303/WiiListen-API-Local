@@ -17,4 +17,6 @@ public interface UserSubscriptionRepository extends BaseRepository<UserSubscript
 
     List<UserSubscription> findByActiveTrueAndExpiryDateBefore(LocalDateTime dateTime);
 
+    List<UserSubscription> findAllByUserAndActiveTrue(User user);
+
 }

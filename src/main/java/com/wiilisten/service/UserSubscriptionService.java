@@ -14,4 +14,6 @@ public interface UserSubscriptionService extends BaseService<UserSubscription, L
 
     List<UserSubscription> findByActiveTrueAndExpiryDateBefore(LocalDateTime dateTime);
 
+    List<UserSubscription> findAllByUserAndActiveTrue(User user);
+
 }
