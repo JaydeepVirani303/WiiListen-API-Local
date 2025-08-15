@@ -12,12 +12,12 @@ public class CombinedPaymentListenerUserDTO {
 
     private String listenerUserName;
     private String callerUserName;
-    private Double paymentToListener;
-    private Double wiilistenCommission;
-    private Double callerDiscount;
-    private String listenerLocation;
-    private String disbursementProcessedDate; // missing in model
-    private String callerLocation; // missing in model unless User has it
+    private Double paymentToListener; //payment made to listener
+    private Double wiilistenCommission; //commission for Wiilisten
+    private Double callerDiscount; // caller discount
+    private String listenerLocation; // location of payment recipient
+    private String disbursementProcessedDate; // booking date time
+    private String callerLocation; // location of caller
     private String paymentDate; // missing in model unless you reuse existing date (currently call acceptDateTime consider as a paymentDate)
     private String callType; // ON_DEMAND / SCHEDULE
     private Long durationInMinutes;
@@ -32,14 +32,22 @@ public class CombinedPaymentListenerUserDTO {
                                 ? bookedCall.getCaller().getUser().getCallName()
                                 : null
                 )
-                .paymentToListener(bookedCall.getPayableAmount())
+                .paymentToListener(bookedCall.getListener() != null && bookedCall.getListener().getTotalEarning() != null && bookedCall.getListener().getTotalCommission() != null
+                        ? bookedCall.getListener().getTotalEarning() - bookedCall.getListener().getTotalCommission()
+                        : 0)
                 .wiilistenCommission(bookedCall.getAdminCommissionRate())
-                .callerDiscount(bookedCall.getDiscountValue())
-                .listenerLocation(bookedCall.getListener() != null ? bookedCall.getListener().getLocation() : null)
-                .disbursementProcessedDate(null)
-                .callerLocation(null)
-                .paymentDate(bookedCall.getAcceptedDateTime() != null
-                        ? bookedCall.getAcceptedDateTime().format(formatter)
+                .callerDiscount(null)
+                .listenerLocation(bookedCall.getListener() != null && bookedCall.getListener().getUser() != null
+                        ? bookedCall.getListener().getUser().getTimeZone()
+                        : null)
+                .disbursementProcessedDate(bookedCall.getBookingDateTime() != null
+                        ? bookedCall.getBookingDateTime().format(formatter)
+                        : null)
+                .callerLocation(bookedCall.getCaller() != null && bookedCall.getCaller().getUser() != null
+                        ? bookedCall.getCaller().getUser().getTimeZone()
+                        : null)
+                .paymentDate(bookedCall.getCallerJoinedAt() != null
+                        ? bookedCall.getCallerJoinedAt().format(formatter)
                         : null)
                 .callType(bookedCall.getType())
                 .durationInMinutes(bookedCall.getDurationInMinutes())

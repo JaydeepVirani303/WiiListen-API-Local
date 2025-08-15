@@ -8,4 +8,6 @@ import com.wiilisten.entity.CommissionRate;
 public interface CommissionRateRepository extends BaseRepository<CommissionRate, Long>{
 
 	CommissionRate findByActiveTrue();
+
+    CommissionRate findFirstByOrderByIdAsc();
 }
