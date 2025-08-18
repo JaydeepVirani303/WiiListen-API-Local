@@ -224,8 +224,8 @@ public class ListenerProfileServiceImpl extends BaseServiceImpl<ListenerProfile,
 	}
 
 	@Override
-	public List<ListenerProfile> findActiveProfilesBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
-		return getDaoFactory().getListenerProfileRepository().findActiveProfilesByCreatedAtBetween(startDate, endDate);
+	public List<ListenerProfile> findActiveProfilesByCreatedAtBetweenAndMinEarning(LocalDateTime startDate, LocalDateTime endDate, Double amount) {
+		return getDaoFactory().getListenerProfileRepository().findActiveProfilesByCreatedAtBetweenAndMinEarning(startDate, endDate, amount);
 	}
 
 }
