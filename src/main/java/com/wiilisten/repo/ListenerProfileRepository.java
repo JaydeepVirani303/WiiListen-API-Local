@@ -106,10 +106,12 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 			"WHERE lp.active = true " +
 			"AND lp.createdAt >= :startDate " +
 			"AND lp.createdAt <= :endDate " +
+			"AND lp.totalEarning > :minEarning " +
 			"ORDER BY lp.id")
-	List<ListenerProfile> findActiveProfilesByCreatedAtBetween(
+	List<ListenerProfile> findActiveProfilesByCreatedAtBetweenAndMinEarning(
 			@Param("startDate") LocalDateTime startDate,
-			@Param("endDate") LocalDateTime endDate
+			@Param("endDate") LocalDateTime endDate,
+			@Param("minEarning") Double minEarning
 	);
 
 
