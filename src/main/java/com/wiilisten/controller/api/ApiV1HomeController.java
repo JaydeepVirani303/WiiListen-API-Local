@@ -326,36 +326,64 @@ public class ApiV1HomeController extends BaseController {
 
 	@GetMapping(ApplicationURIConstants.USER + ApplicationURIConstants.DELETE)
 	public ResponseEntity<Object> deleteUser(@RequestParam String type) {
-
-		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+		LOGGER.info("Entered deleteUser() with type: {}", type);
 
 		try {
-
 			User user = getLoggedInUser();
+			LOGGER.info("Deleting user with ID: {}", user.getId());
 
-			ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
-			if (listener != null) {
-				listener.setActive(false);
-				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+			switch (type.toUpperCase()) {
+				case "LISTENER":
+					deactivateListener(user);
+					break;
+
+				case "CALLER":
+					deactivateCaller(user);
+					break;
+
+				default:
+					deactivateListener(user);
+					deactivateCaller(user);
+					LOGGER.info("Deleted both Listener and Caller profiles for user ID: {}", user.getId());
 			}
 
-			CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
-			if (caller != null) {
-				caller.setActive(false);
-				getServiceRegistry().getCallerProfileService().saveORupdate(caller);
-			}
-
+			// Deactivate user itself
 			user.setActive(false);
 			getServiceRegistry().getUserService().saveORupdate(user);
+			LOGGER.info("User deactivated successfully. ID: {}", user.getId());
 
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			LOGGER.info("Exiting deleteUser() successfully.");
 			return ResponseEntity.ok(
-					getCommonServices().generateSuccessResponseWithMessageKey(SuccessMsgEnum.USER_DELETED.getCode()));
+					getCommonServices().generateSuccessResponseWithMessageKey(SuccessMsgEnum.USER_DELETED.getCode())
+			);
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			LOGGER.error("Error occurred while deleting user. Type: {}, Error: {}", type, e.getMessage(), e);
+			LOGGER.info("Exiting deleteUser() with failure.");
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	// Helper methods to avoid code repetition
+	private void deactivateListener(User user) {
+		ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
+		if (listener != null) {
+			listener.setActive(false);
+			getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+			LOGGER.info("ListenerProfile deactivated for user ID: {}", user.getId());
+		} else {
+			LOGGER.info("No active ListenerProfile found for user ID: {}", user.getId());
+		}
+	}
+
+	private void deactivateCaller(User user) {
+		CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
+		if (caller != null) {
+			caller.setActive(false);
+			getServiceRegistry().getCallerProfileService().saveORupdate(caller);
+			LOGGER.info("CallerProfile deactivated for user ID: {}", user.getId());
+		} else {
+			LOGGER.info("No active CallerProfile found for user ID: {}", user.getId());
 		}
 	}
 
