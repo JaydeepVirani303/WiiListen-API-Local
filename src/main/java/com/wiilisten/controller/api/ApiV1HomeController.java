@@ -335,20 +335,29 @@ public class ApiV1HomeController extends BaseController {
 			switch (type.toUpperCase()) {
 				case "LISTENER":
 					deactivateListener(user);
+					CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
+					if (caller == null) {
+						user.setActive(false);
+					}
 					break;
 
 				case "CALLER":
 					deactivateCaller(user);
+					ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
+					if (listener == null) {
+						user.setActive(false);
+					}
 					break;
 
 				default:
 					deactivateListener(user);
 					deactivateCaller(user);
+					user.setActive(false);
 					LOGGER.info("Deleted both Listener and Caller profiles for user ID: {}", user.getId());
 			}
 
 			// Deactivate user itself
-			user.setActive(false);
+
 			getServiceRegistry().getUserService().saveORupdate(user);
 			LOGGER.info("User deactivated successfully. ID: {}", user.getId());
 
@@ -374,6 +383,7 @@ public class ApiV1HomeController extends BaseController {
 		} else {
 			LOGGER.info("No active ListenerProfile found for user ID: {}", user.getId());
 		}
+
 	}
 
 	private void deactivateCaller(User user) {
