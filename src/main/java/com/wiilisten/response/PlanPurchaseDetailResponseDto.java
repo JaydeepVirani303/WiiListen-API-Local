@@ -10,16 +10,20 @@ public class PlanPurchaseDetailResponseDto {
     private Date purchaseDate;
     private int durationInDays; //1 , 30 , 365
     private String type; //SUBSCRIPTION/ADVERTISEMENT
+    private Long subscriptionId;
 
     // No-args constructor (needed for JSON serialization)
     public PlanPurchaseDetailResponseDto() {
     }
 
     // All-args constructor
-    public PlanPurchaseDetailResponseDto(Date purchaseDate, int durationInDays, String type) {
+
+
+    public PlanPurchaseDetailResponseDto(Date purchaseDate, int durationInDays, String type, Long subscriptionId) {
         this.purchaseDate = purchaseDate;
         this.durationInDays = durationInDays;
         this.type = type;
+        this.subscriptionId = subscriptionId;
     }
 
     public void setPurchaseDate(Date purchaseDate) {
@@ -34,13 +38,7 @@ public class PlanPurchaseDetailResponseDto {
         this.type = category;
     }
 
-    // For debugging
-    @Override
-    public String toString() {
-        return "PlanPurchaseDetailResponseDto{" +
-                "purchaseDate=" + purchaseDate +
-                ", durationInDays=" + durationInDays +
-                ", type='" + type + '\'' +
-                '}';
+    public void setSubscriptionId(Long subscriptionId) {
+        this.subscriptionId = subscriptionId;
     }
 }

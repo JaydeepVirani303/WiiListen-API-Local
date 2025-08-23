@@ -602,7 +602,8 @@ public class ApiV1AuthenticationController extends BaseController {
 						PlanPurchaseDetailResponseDto planPurchaseDetailResponseDto = new PlanPurchaseDetailResponseDto(
 								sub.getCreatedAt(),
 								sub.getSubscription().getDurationInDays(),
-								sub.getType()
+								sub.getType(),
+								sub.getSubscription().getId()
 						);
 						planDetails.add(planPurchaseDetailResponseDto);
 					}
