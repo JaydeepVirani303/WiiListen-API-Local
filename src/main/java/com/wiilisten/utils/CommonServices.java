@@ -919,8 +919,8 @@ public class CommonServices {
 	}
 
 	public Boolean isAccountSwitched(User user) {
-		CallerProfile callerProfile = serviceRegistry.getCallerProfileService().findByUser(user);
-		ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService().findByUser(user);
+		CallerProfile callerProfile = serviceRegistry.getCallerProfileService().findByUserAndActiveTrue(user);
+		ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService().findByUserAndActiveTrue(user);
 		if (callerProfile != null && listenerProfile != null) {
 			return true;
 		} else {
