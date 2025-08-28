@@ -135,13 +135,22 @@ public class ApiV1StripePaymentController extends BaseController {
 			bookedCall.setCallerJoinedAt(LocalDateTime.now());
 			bookedCall.setSponsored(bookedCallDetailsDto.getSponsored());
 			bookedCall.setBookingDateTime(LocalDateTime.now().withSecond(0).withNano(0));
-			bookedCall.setDurationInMinutes(0L);
+			if (bookedCallDetailsDto.getDurationInMinutes() != null) {
+				bookedCall.setDurationInMinutes(bookedCallDetailsDto.getDurationInMinutes());
+			} else {
+				bookedCall.setDurationInMinutes(0L);
+			}
 			bookedCall.setCallRequestStatus(ApplicationConstants.PENDING);
 			bookedCall.setCallStatus(ApplicationConstants.SCHEDULED);
 			bookedCall.setType(bookedCallDetailsDto.getCallType());
 			bookedCall.setPaymentlog((intent.toJson()).toString());
 			bookedCall.setPaymentStatus(ApplicationConstants.HOLD);
 			bookedCall.setPaymentIntent(intent.getId());
+
+			if (bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.ON_DEMAND)) {
+				bookedCall.setActive(false);
+			}
+
 			getServiceRegistry().getBookedCallsService().saveORupdate(bookedCall);
 			paymentIntenetResponseDto.setBookingId(bookedCall.getId());
 		}

@@ -81,6 +81,14 @@ public class ApiV1AgoraCallController extends BaseController {
 			} else {
 				bookedcall.setListenerJoinedAt(LocalDateTime.now());
 			}
+
+            // if bookedcall is OnDemand or Active False
+
+            if (bookedcall.getType().equals(ApplicationConstants.ON_DEMAND) && !bookedcall.getActive()) {
+                bookedcall.setActive(Boolean.TRUE);
+            }
+
+
 			bookedcall = getServiceRegistry().getBookedCallsService().saveORupdate(bookedcall);
 			// }
 			System.err.println("Before condition");
