@@ -131,6 +131,8 @@ public class ApplicationURIConstants {
 
 	public static final String REPORT = "/report";
 	public static final String DOWNLOAD_ZIP = "/download-zip";
+	public static final String VIDEO = "/video";
+	public static final String COMPRESS = "/compress";
 
 	private ApplicationURIConstants() {
 
