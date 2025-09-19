@@ -123,7 +123,8 @@ public class BookedCalls {
 		isNotificationSent30Min=Boolean.FALSE;
 		isNotificationSent1Hour=Boolean.FALSE;
 		isNotificationSent1Day=Boolean.FALSE;
-		durationInMinutes = 0L;
-
+		if (durationInMinutes == null) {
+			durationInMinutes = 0L;
+		}
 	}
 }
