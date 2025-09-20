@@ -52,4 +52,6 @@ public class TrainingMaterial {
 	private Date updatedAt;
 
 	private String subCategory;
+
+	private Integer orderNumber;
 }

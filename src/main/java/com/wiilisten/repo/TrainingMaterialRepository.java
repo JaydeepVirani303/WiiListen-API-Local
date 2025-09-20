@@ -32,4 +32,6 @@ public interface TrainingMaterialRepository extends BaseRepository<TrainingMater
 	
 	List<TrainingMaterial> findByActiveTrueOrderByIdDesc();
 
+	List<TrainingMaterial> findByActiveTrueOrderByOrderNumberAsc();
+
 }
