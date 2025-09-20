@@ -247,8 +247,7 @@ public class ApiV1CommonController extends BaseController {
 							.findByBookingDateTimeAndListenerAndActiveTrue(currentDate, listener);
 					LOGGER.info("Booked calls on {}: {}", currentDate, bookedCalls.size());
 
-					List<TimeSlotDto> allBookedSlots = converBookcallsToTimeSlot(bookedCalls);
-
+					List<TimeSlotDto> allBookedSlots = convertBookedcallsToTimeSlot(bookedCalls, idRequestDto.getTimeZone());
 					Map<LocalDate, List<TimeSlotDto>> generatedSlots = generateTimeSlotsInTargetTimeZone(currentDate, listenerAvailability.getStartTime(), listenerAvailability.getEndTime(), idRequestDto.getTimeZone(), idRequestDto.getDurationInMinutes());
 					LOGGER.info("generated slots : {}", generatedSlots);
 
@@ -455,19 +454,47 @@ public class ApiV1CommonController extends BaseController {
 	}
 
 
-	private List<TimeSlotDto> converBookcallsToTimeSlot(List<BookedCalls> listOfbookingDateCalls) {
+//	private List<TimeSlotDto> converBookcallsToTimeSlot(List<BookedCalls> listOfbookingDateCalls) {
+//		List<TimeSlotDto> availableList = new ArrayList<>();
+//		LOGGER.info("Converting booked calls to time slots. Total bookings: {}", listOfbookingDateCalls.size());
+//		for (BookedCalls call : listOfbookingDateCalls) {
+//			LocalTime startTime = getCommonServices().getTimeFromDate(call.getBookingDateTime());
+//			LocalTime endTime = startTime.plusMinutes(call.getDurationInMinutes());
+//
+//			TimeSlotDto slot = new TimeSlotDto(startTime, endTime);
+//			availableList.add(slot);
+//
+//			LOGGER.info("Converted booking - Start: {}, End: {}, Duration: {} mins",
+//					startTime, endTime, call.getDurationInMinutes());
+//		}
+//		LOGGER.info("Total converted time slots: {}", availableList.size());
+//		return availableList;
+//	}
+
+	private List<TimeSlotDto> convertBookedcallsToTimeSlot(List<BookedCalls> listOfbookingDateCalls, String timeZone) {
 		List<TimeSlotDto> availableList = new ArrayList<>();
 		LOGGER.info("Converting booked calls to time slots. Total bookings: {}", listOfbookingDateCalls.size());
+
+		ZoneId targetZone = ZoneId.of(timeZone);
+
 		for (BookedCalls call : listOfbookingDateCalls) {
-			LocalTime startTime = getCommonServices().getTimeFromDate(call.getBookingDateTime());
+			// Assume bookingDateTime in DB is UTC
+			ZonedDateTime utcDateTime = call.getBookingDateTime().atZone(ZoneOffset.UTC);
+
+			// Convert to requested timezone
+			ZonedDateTime userDateTime = utcDateTime.withZoneSameInstant(targetZone);
+
+			// Extract local time for that zone
+			LocalTime startTime = userDateTime.toLocalTime();
 			LocalTime endTime = startTime.plusMinutes(call.getDurationInMinutes());
 
 			TimeSlotDto slot = new TimeSlotDto(startTime, endTime);
 			availableList.add(slot);
 
-			LOGGER.info("Converted booking - Start: {}, End: {}, Duration: {} mins",
-					startTime, endTime, call.getDurationInMinutes());
+			LOGGER.info("Converted booking - Start: {}, End: {}, Duration: {} mins, Zone: {}",
+					startTime, endTime, call.getDurationInMinutes(), timeZone);
 		}
+
 		LOGGER.info("Total converted time slots: {}", availableList.size());
 		return availableList;
 	}
