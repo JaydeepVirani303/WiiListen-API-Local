@@ -35,4 +35,7 @@ public class TrainingMaterialRequestDto {
 	@JsonProperty("sub_category")
 	private String subCategory;
 
+	@JsonProperty("order_number")
+	private Integer orderNumber;
+
 }

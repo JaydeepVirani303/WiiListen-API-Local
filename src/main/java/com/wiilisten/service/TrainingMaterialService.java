@@ -17,4 +17,6 @@ public interface TrainingMaterialService extends BaseService<TrainingMaterial, L
 	
 	List<TrainingMaterial> findByActiveTrueOrderByIdDesc();
 
+	List<TrainingMaterial> findByActiveTrueOrderByOrderNumberAsc();
+
 }

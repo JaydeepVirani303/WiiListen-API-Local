@@ -3,14 +3,12 @@ package com.wiilisten.controller.api.admin;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.wiilisten.request.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.wiilisten.controller.BaseController;
 import com.wiilisten.entity.ContactUs;
@@ -19,12 +17,6 @@ import com.wiilisten.entity.PageContent;
 import com.wiilisten.entity.TrainingMaterial;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
-import com.wiilisten.request.ContactUsReplyRequestDto;
-import com.wiilisten.request.FaqRequestDto;
-import com.wiilisten.request.IdRequestDto;
-import com.wiilisten.request.PageContentRequestDto;
-import com.wiilisten.request.TrainingMaterialRequestDto;
-import com.wiilisten.request.TypeRequestDto;
 import com.wiilisten.response.ContactUsResponseDto;
 import com.wiilisten.response.FaqDetailsDto;
 import com.wiilisten.response.PageContentResponseDto;
@@ -177,7 +169,7 @@ public class ApiV1AdminPageContentController extends BaseController {
 
 		try {
 			List<TrainingMaterial> trainingMaterials = getServiceRegistry().getTrainingMaterialService()
-					.findByActiveTrueOrderByIdDesc();
+					.findByActiveTrueOrderByOrderNumberAsc();
 			if (trainingMaterials.isEmpty()) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices()
@@ -198,6 +190,34 @@ public class ApiV1AdminPageContentController extends BaseController {
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
+	@PutMapping(ApplicationURIConstants.TRAINING_MATERIAL + ApplicationURIConstants.UPDATE_ORDER)
+	public ResponseEntity<Object> updateVideoOrder(@RequestBody List<VideoOrderUpdateRequest> updateRequests) {
+		Logger logger = LoggerFactory.getLogger(this.getClass());
+
+		for (VideoOrderUpdateRequest request : updateRequests) {
+			TrainingMaterial trainingMaterial = getServiceRegistry()
+					.getTrainingMaterialService()
+					.findOne(request.getId());
+
+			if (trainingMaterial == null) {
+				logger.warn("TrainingMaterial not found for ID: {}", request.getId());
+				continue;
+			}
+
+			trainingMaterial.setOrderNumber(request.getOrderNumber());
+			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
+
+			logger.info("Updated TrainingMaterial with ID: {}, OrderNumber: {}",
+					request.getId(), request.getOrderNumber());
+		}
+
+		logger.info("Video orders updated successfully!");
+		return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKey(
+				SuccessMsgEnum.TRAINING_MATERIAL_UPDATED_SUCCESSFULLY.getCode()));
+	}
+
+
 
 	@PostMapping(ApplicationURIConstants.TRAINING_MATERIAL + ApplicationURIConstants.UPDATE)
 	public ResponseEntity<Object> updateTrainingMaterial(@RequestBody TrainingMaterialRequestDto requestDto) {
