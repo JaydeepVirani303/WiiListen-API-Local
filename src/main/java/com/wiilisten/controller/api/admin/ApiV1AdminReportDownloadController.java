@@ -147,7 +147,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
         try {
             listenerProfileList = getServiceRegistry()
                     .getListenerProfileService()
-                    .findActiveProfilesByCreatedAtBetweenAndMinEarning(startDate, endDate, 600.0);
+                    .findProfilesByCreatedAtBetweenAndMinEarning(startDate, endDate, 600.0);
         } catch (Exception e) {
             LOGGER.error("Failed to fetch listener profiles from database: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
