@@ -92,5 +92,5 @@ public interface ListenerProfileService extends BaseService<ListenerProfile, Lon
     List<ListenerProfile> findAllByActiveAndAppActiveStatusAndUserNotIn(Boolean true1, Boolean true2,
             List<Long> listenerIds);
 
-	public List<ListenerProfile> findActiveProfilesByCreatedAtBetweenAndMinEarning(LocalDateTime startDate, LocalDateTime endDate, Double amount);
+	public List<ListenerProfile> findProfilesByCreatedAtBetweenAndMinEarning(LocalDateTime startDate, LocalDateTime endDate, Double amount);
 }
