@@ -53,5 +53,5 @@ public class TrainingMaterial {
 
 	private String subCategory;
 
-	private Integer orderNumber;
+	private int orderNumber;
 }

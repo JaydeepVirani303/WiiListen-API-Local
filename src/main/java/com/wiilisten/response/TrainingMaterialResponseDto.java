@@ -50,6 +50,6 @@ public class TrainingMaterialResponseDto {
 	private String subCategory;
 
 	@JsonProperty("order_number")
-	private Integer orderNumber;
+	private int orderNumber;
 
 }
