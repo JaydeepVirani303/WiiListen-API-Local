@@ -218,6 +218,11 @@ public class ListenerProfileServiceImpl extends BaseServiceImpl<ListenerProfile,
 	}
 
 	@Override
+	public List<ListenerProfile> findTop10ActiveAdvertisementListenersWithActiveSubscription(Pageable pageable) {
+		return getDaoFactory().getListenerProfileRepository().findTop10ActiveAdvertisementListenersWithActiveSubscription(pageable);
+	}
+
+	@Override
 	public List<String> findUniqueLocations() {
 		return getDaoFactory().getListenerProfileRepository().findUniqueLocations();
 	}

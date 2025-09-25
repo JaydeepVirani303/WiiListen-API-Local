@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -738,10 +739,9 @@ public class ApiV1HomeController extends BaseController {
 				favListnereList = getServiceRegistry().getFavoriteListenerService()
 						.findTop10ByCallerIdAndActiveTrue(user.getId());
 				favListnereList = getCommonServices().filterBlockedFavouriteListeners(user, favListnereList); // removed
-																												// blocked
-																												// user
+				// user
 				listenerProfiles = getServiceRegistry().getListenerProfileService()
-						.findTop10ByIsAdvertisementActiveTrueAndActiveTrue();
+						.findTop10ActiveAdvertisementListenersWithActiveSubscription(PageRequest.of(0, 10));
 				listenerProfiles = getCommonServices().filterBlockedListeners(user, listenerProfiles);
 				upcomingDtoList = getCommonServices().convertBeanToDtoForBookedCall(upcomingbookedcalls,
 						ApplicationConstants.CALL_REQUEST);
