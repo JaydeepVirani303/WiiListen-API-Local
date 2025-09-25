@@ -93,6 +93,13 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 	Optional<ListenerProfile> findRandomListenerProfile();
 	
 	Page<ListenerProfile> findByIsAdvertisementActiveTrueAndActiveTrue(Pageable pageable);
+
+	@Query("SELECT lp FROM ListenerProfile lp " +
+			"JOIN CallerProfile cp ON lp.user.id = cp.user.id " +
+			"WHERE lp.isAdvertisementActive = TRUE " +
+			"AND lp.active = TRUE " +
+			"AND cp.searchSubscriptionStatus = 'ACTIVE'")
+	Page<ListenerProfile> findActiveAdvertisementListenersWithActiveSubscription(Pageable pageable);
 	
 	List<ListenerProfile> findTop10ByIsAdvertisementActiveTrueAndActiveTrue();
 	

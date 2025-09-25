@@ -204,7 +204,12 @@ public class ListenerProfileServiceImpl extends BaseServiceImpl<ListenerProfile,
 
 	@Override
 	public Page<ListenerProfile> findByIsAdvertisementActiveTrueAndActiveTrue(Pageable pageable) {
-		return getDaoFactory().getListenerProfileRepository().findByIsAdvertisementActiveTrueAndActiveTrue(pageable); 
+		return getDaoFactory().getListenerProfileRepository().findByIsAdvertisementActiveTrueAndActiveTrue(pageable);
+	}
+
+	@Override
+	public Page<ListenerProfile> findActiveAdvertisementListenersWithActiveSubscription(Pageable pageable) {
+		return getDaoFactory().getListenerProfileRepository().findActiveAdvertisementListenersWithActiveSubscription(pageable);
 	}
 
 	@Override
