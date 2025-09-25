@@ -84,7 +84,9 @@ public interface ListenerProfileService extends BaseService<ListenerProfile, Lon
 	Optional<ListenerProfile> findRandomListenerProfile();
 	
 	Page<ListenerProfile> findByIsAdvertisementActiveTrueAndActiveTrue(Pageable pageable);
-	
+
+	Page<ListenerProfile> findActiveAdvertisementListenersWithActiveSubscription(Pageable pageable);
+
 	List<ListenerProfile> findTop10ByIsAdvertisementActiveTrueAndActiveTrue();
 	
 	List<String> findUniqueLocations();
