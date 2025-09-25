@@ -102,8 +102,16 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 	Page<ListenerProfile> findActiveAdvertisementListenersWithActiveSubscription(Pageable pageable);
 	
 	List<ListenerProfile> findTop10ByIsAdvertisementActiveTrueAndActiveTrue();
-	
-	 @Query("SELECT DISTINCT lp.location FROM ListenerProfile lp WHERE lp.active = true")
+
+	@Query("SELECT lp FROM ListenerProfile lp " +
+			"JOIN CallerProfile cp ON lp.user.id = cp.user.id " +
+			"WHERE lp.isAdvertisementActive = TRUE " +
+			"AND lp.active = TRUE " +
+			"AND cp.searchSubscriptionStatus = 'ACTIVE'")
+	List<ListenerProfile> findTop10ActiveAdvertisementListenersWithActiveSubscription(Pageable pageable);
+
+
+	@Query("SELECT DISTINCT lp.location FROM ListenerProfile lp WHERE lp.active = true")
 	 List<String> findUniqueLocations();
 
     List<ListenerProfile> findByActiveAndAppActiveStatusAndUserIdNotIn(Boolean true1, Boolean true2,
