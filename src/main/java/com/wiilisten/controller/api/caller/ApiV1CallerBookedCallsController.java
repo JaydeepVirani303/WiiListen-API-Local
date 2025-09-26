@@ -213,7 +213,10 @@ public class ApiV1CallerBookedCallsController extends BaseController {
 
 			BookedCalls bookedcalls = new BookedCalls();
 			NotificationHistory notification = new NotificationHistory();
-			bookedcalls.setBookingDateTime(bookedCallDetailsDto.getBookingDateTime());
+			ZonedDateTime istDateTime = bookedCallDetailsDto.getBookingDateTime()
+					.atZone(ZoneId.of(bookedCallDetailsDto.getRequestedTimeZone()));
+			ZonedDateTime utcDateTime = istDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+			bookedcalls.setBookingDateTime(utcDateTime.toLocalDateTime());
 			bookedcalls.setCaller(caller);
 			bookedcalls.setListener(listener);
 			bookedcalls.setDurationInMinutes(bookedCallDetailsDto.getDurationInMinutes());
