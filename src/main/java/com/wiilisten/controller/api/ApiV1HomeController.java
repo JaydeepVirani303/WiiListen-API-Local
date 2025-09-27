@@ -741,7 +741,7 @@ public class ApiV1HomeController extends BaseController {
 				favListnereList = getCommonServices().filterBlockedFavouriteListeners(user, favListnereList); // removed
 				// user
 				listenerProfiles = getServiceRegistry().getListenerProfileService()
-						.findTop10ActiveAdvertisementListenersWithActiveSubscription(PageRequest.of(0, 10));
+						.findTop10ActiveAdvertisementListeners(PageRequest.of(0, 10));
 				listenerProfiles = getCommonServices().filterBlockedListeners(user, listenerProfiles);
 				upcomingDtoList = getCommonServices().convertBeanToDtoForBookedCall(upcomingbookedcalls,
 						ApplicationConstants.CALL_REQUEST);

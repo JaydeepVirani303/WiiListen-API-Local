@@ -89,11 +89,11 @@ public interface ListenerProfileService extends BaseService<ListenerProfile, Lon
 
 	List<ListenerProfile> findTop10ByIsAdvertisementActiveTrueAndActiveTrue();
 
-	List<ListenerProfile> findTop10ActiveAdvertisementListenersWithActiveSubscription(Pageable pageable);
+	List<ListenerProfile> findTop10ActiveAdvertisementListeners(Pageable pageable);
 
 	List<String> findUniqueLocations();
 
-    List<ListenerProfile> findAllByActiveAndAppActiveStatusAndUserNotIn(Boolean true1, Boolean true2,
+	List<ListenerProfile> findAllByActiveAndAppActiveStatusAndUserNotIn(Boolean true1, Boolean true2,
             List<Long> listenerIds);
 
 	public List<ListenerProfile> findProfilesByCreatedAtBetweenAndMinEarning(LocalDateTime startDate, LocalDateTime endDate, Double amount);
