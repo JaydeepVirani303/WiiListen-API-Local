@@ -19,4 +19,10 @@ public interface TrainingMaterialService extends BaseService<TrainingMaterial, L
 
 	List<TrainingMaterial> findByActiveTrueOrderByOrderNumberAsc();
 
+	List<TrainingMaterial> findAllByActiveTrueOrderByOrderNumberAsc();
+
+	void saveAll(List<TrainingMaterial> materials);
+
+	Long countByActiveTrue();
+
 }
