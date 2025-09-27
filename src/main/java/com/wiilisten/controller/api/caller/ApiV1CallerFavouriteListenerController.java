@@ -119,7 +119,7 @@ public class ApiV1CallerFavouriteListenerController extends BaseController {
 
 			Pageable pageable = getCommonServices().convertRequestToPageableObject(requestDetails);
 			Page<ListenerProfile> listenerProfiles = getServiceRegistry().getListenerProfileService()
-					.findActiveAdvertisementListenersWithActiveSubscription(pageable);
+                    .findByIsAdvertisementActiveTrueAndActiveTrue(pageable);
 			if (ApplicationUtils.isEmpty(listenerProfiles)) {
 
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);

@@ -91,7 +91,10 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 			+ "AND app_active_status = TRUE " + "AND active = TRUE " + "AND current_signup_step = 'STEP_7' "
 			+ "ORDER BY RAND() " + "LIMIT 1", nativeQuery = true)
 	Optional<ListenerProfile> findRandomListenerProfile();
-	
+
+	@Query("SELECT lp FROM ListenerProfile lp " +
+			"WHERE lp.isAdvertisementActive = TRUE " +
+			"AND lp.active = TRUE")
 	Page<ListenerProfile> findByIsAdvertisementActiveTrueAndActiveTrue(Pageable pageable);
 
 	@Query("SELECT lp FROM ListenerProfile lp " +
@@ -128,5 +131,9 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 			@Param("minEarning") Double minEarning
 	);
 
+	@Query("SELECT lp FROM ListenerProfile lp " +
+			"WHERE lp.isAdvertisementActive = TRUE " +
+			"AND lp.active = TRUE")
+	List<ListenerProfile> findTop10ActiveAdvertisementListeners(Pageable pageable);
 
 }
