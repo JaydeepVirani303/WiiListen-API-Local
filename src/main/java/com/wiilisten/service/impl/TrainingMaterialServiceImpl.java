@@ -46,4 +46,18 @@ public class TrainingMaterialServiceImpl extends BaseServiceImpl<TrainingMateria
 	public List<TrainingMaterial> findByActiveTrueOrderByOrderNumberAsc() {
 		return getDaoFactory().getTrainingMaterialRepository().findByActiveTrueOrderByOrderNumberAsc();
 	}
+
+	@Override
+	public List<TrainingMaterial> findAllByActiveTrueOrderByOrderNumberAsc() {
+		return getDaoFactory().getTrainingMaterialRepository().findAllByActiveTrueOrderByOrderNumberAsc();
+	}
+
+	public void saveAll(List<TrainingMaterial> materials) {
+		getDaoFactory().getTrainingMaterialRepository().saveAll(materials);
+	}
+
+	@Override
+	public Long countByActiveTrue() {
+		return getDaoFactory().getTrainingMaterialRepository().countByActiveTrue();
+	}
 }

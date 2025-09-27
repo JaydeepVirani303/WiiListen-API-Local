@@ -34,4 +34,7 @@ public interface TrainingMaterialRepository extends BaseRepository<TrainingMater
 
 	List<TrainingMaterial> findByActiveTrueOrderByOrderNumberAsc();
 
+	List<TrainingMaterial> findAllByActiveTrueOrderByOrderNumberAsc();
+
+	Long countByActiveTrue();
 }

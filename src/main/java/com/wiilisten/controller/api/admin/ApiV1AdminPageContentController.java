@@ -151,6 +151,10 @@ public class ApiV1AdminPageContentController extends BaseController {
 			TrainingMaterial trainingMaterial = new TrainingMaterial();
 			BeanUtils.copyProperties(requestDto, trainingMaterial);
 			trainingMaterial.setActive(true);
+			Long currentCount = getServiceRegistry()
+					.getTrainingMaterialService()
+					.countByActiveTrue();
+			trainingMaterial.setOrderNumber((int) (currentCount + 1));
 			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKey(
@@ -227,6 +231,7 @@ public class ApiV1AdminPageContentController extends BaseController {
 		try {
 			TrainingMaterial trainingMaterial = getServiceRegistry().getTrainingMaterialService()
 					.findByIdAndActiveTrue(requestDto.getId());
+			int oldOrderNumber = trainingMaterial.getOrderNumber();
 			if (trainingMaterial == null) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices()
@@ -234,6 +239,7 @@ public class ApiV1AdminPageContentController extends BaseController {
 			}
 			BeanUtils.copyProperties(requestDto, trainingMaterial,
 					getCommonServices().getNullPropertyNames(requestDto));
+			trainingMaterial.setOrderNumber(oldOrderNumber);
 			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
@@ -252,6 +258,7 @@ public class ApiV1AdminPageContentController extends BaseController {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
+			// 1. Find record by ID and active flag
 			TrainingMaterial trainingMaterial = getServiceRegistry().getTrainingMaterialService()
 					.findByIdAndActiveTrue(idRequestDto.getId());
 			if (trainingMaterial == null) {
@@ -259,18 +266,33 @@ public class ApiV1AdminPageContentController extends BaseController {
 				return ResponseEntity.ok(getCommonServices()
 						.generateBadResponseWithMessageKey(ErrorDataEnum.TRAINING_MATERIAL_NOT_EXIST.getCode()));
 			}
+
+			// 2. Soft delete (mark inactive)
 			trainingMaterial.setActive(false);
 			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
+
+			// 3. Fetch all active rows ordered by orderNumber
+			List<TrainingMaterial> activeMaterials =
+					getServiceRegistry().getTrainingMaterialService().findAllByActiveTrueOrderByOrderNumberAsc();
+
+			// 4. Reorder them
+			int counter = 1;
+			for (TrainingMaterial active : activeMaterials) {
+				active.setOrderNumber(counter++);
+			}
+			getServiceRegistry().getTrainingMaterialService().saveAll(activeMaterials);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKey(
 					SuccessMsgEnum.TRAINING_MATERIAL_DELETED_SUCCESSFULLY.getCode()));
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
 
 	@PostMapping(ApplicationURIConstants.FAQ + ApplicationURIConstants.ADD)
 	public ResponseEntity<Object> addFaq(@RequestBody FaqRequestDto faqRequestDto) {
