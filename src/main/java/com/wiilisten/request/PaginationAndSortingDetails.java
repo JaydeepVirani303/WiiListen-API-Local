@@ -3,6 +3,7 @@ package com.wiilisten.request;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.wiilisten.utils.ApplicationConstants;
 
 import lombok.Getter;
@@ -16,16 +17,18 @@ import lombok.Setter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PaginationAndSortingDetails {
 
-	@JsonProperty(value = ApplicationConstants.PAGE_NUMBER)
+	@JsonProperty(ApplicationConstants.PAGE_NUMBER)
 	private Integer pageNumber;
-	
-	@JsonProperty(value = ApplicationConstants.SORT_BY)
+
+	@JsonProperty(ApplicationConstants.SORT_BY)
 	private String sortBy;
-	
-	@JsonProperty(value = ApplicationConstants.SORT_TYPE)
+
+	@JsonProperty(ApplicationConstants.SORT_TYPE)
 	private String sortType;
-	
-	@JsonProperty(value = ApplicationConstants.PAGE_SIZE)
+
+	@JsonProperty(ApplicationConstants.PAGE_SIZE)
 	private Integer pageSize;
-	
+
+	@JsonProperty(ApplicationConstants.REQUESTED_TIMEZONE)
+	private String requestedTimeZone;
 }
