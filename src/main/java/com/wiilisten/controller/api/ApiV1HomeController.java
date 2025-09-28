@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.wiilisten.request.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -52,14 +53,6 @@ import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.ListenerSignupStepEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.enums.UserRoleEnum;
-import com.wiilisten.request.BookedCallDto;
-import com.wiilisten.request.ContactUsRequestDto;
-import com.wiilisten.request.IdRequestDto;
-import com.wiilisten.request.IdStatusRequestDto;
-import com.wiilisten.request.NewsLetterRequestDto;
-import com.wiilisten.request.PaginationAndSortingDetails;
-import com.wiilisten.request.TimeSlotDto;
-import com.wiilisten.request.TypeRequestDto;
 import com.wiilisten.response.BookedCallDetailsDto;
 import com.wiilisten.response.FaqDetailsDto;
 import com.wiilisten.response.FavoriteListenerDetailsDto;
@@ -76,7 +69,8 @@ import com.wiilisten.utils.ApplicationUtils;
 import com.wiilisten.utils.FCMService;
 import com.wiilisten.utils.GenericResponse;
 
-import io.swagger.v3.oas.annotations.Hidden;
+import java.time.ZoneOffset;
+
 
 @RestController
 @RequestMapping(value = ApplicationURIConstants.API + ApplicationURIConstants.V1)
@@ -600,46 +594,59 @@ public class ApiV1HomeController extends BaseController {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 		Page<BookedCalls> bookedcalls = null;
-		try {
 
+		try {
+			String timeZone = requestDetails.getRequestedTimeZone();
 			User user = getLoggedInUser();
-			List<BookedCallDetailsDto> responseData = new ArrayList<BookedCallDetailsDto>();
+			List<BookedCallDetailsDto> responseData = new ArrayList<>();
 			CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
+
 			if (ApplicationUtils.isEmpty(requestDetails.getSortType()))
 				requestDetails.setSortType("DESC");
+
 			Pageable pageable = getCommonServices().convertRequestToPageableObject(requestDetails);
 
+			// --- CASE 1: CALLER
 			if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 				LOGGER.info("inside caller");
 				List<String> listStatus = Arrays.asList(ApplicationConstants.PENDING, ApplicationConstants.RESCHEDULED);
+
 				bookedcalls = getServiceRegistry().getBookedCallsService()
 						.findByCallerProfileAndCallRequestStatusAndActiveTrue(caller, listStatus, pageable);
 
-				if (bookedcalls == null) {
+				if (bookedcalls == null || bookedcalls.isEmpty()) {
 					LOGGER.info(ApplicationConstants.EXIT_LABEL);
 					return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
-				} else {
-					responseData = getCommonServices().convertBeanToDtoForBookedCall(bookedcalls.getContent(),
-							ApplicationConstants.CALL_REQUEST);
 				}
+
+				responseData = getCommonServices().convertBeanToDtoForBookedCall(
+						bookedcalls.getContent(), ApplicationConstants.CALL_REQUEST);
+
+				// Convert to requested timezone
+				responseData.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
 			}
+
+			// --- CASE 2: LISTENER
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
 			if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
 				LOGGER.info("inside listener");
 				bookedcalls = getServiceRegistry().getBookedCallsService()
 						.findByListenerProfileAndCallRequestStatusAndActiveTrue(listener, ApplicationConstants.PENDING,
 								pageable);
-				if (bookedcalls == null) {
+
+				if (bookedcalls == null || bookedcalls.isEmpty()) {
 					LOGGER.info(ApplicationConstants.EXIT_LABEL);
 					return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
-				} else {
-					responseData = getCommonServices().convertBeanToDtoForBookedCallListener(bookedcalls.getContent());
 				}
-			}
 
-			if (responseData.isEmpty()) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
+				responseData = getCommonServices().convertBeanToDtoForBookedCallListener(bookedcalls.getContent());
+
+				// Convert to requested timezone
+				responseData.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
 			}
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
@@ -651,6 +658,7 @@ public class ApiV1HomeController extends BaseController {
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
 
 	@PostMapping(ApplicationURIConstants.UPCOMINGCALLREQUESTS)
 	public ResponseEntity<Object> getUpcomingCallRequests(@RequestBody PaginationAndSortingDetails requestDetails) {
@@ -708,81 +716,136 @@ public class ApiV1HomeController extends BaseController {
 		}
 	}
 
-	@GetMapping(ApplicationURIConstants.HOMEREQUESTLIST)
-	public ResponseEntity<Object> getAllRequestListForHomePage() {
+	public LocalDateTime convertUtcToTimeZone(LocalDateTime utcDateTime, String timeZone) {
+		if (utcDateTime == null || timeZone == null) return utcDateTime;
+
+		// Treat DB time as UTC
+		ZonedDateTime utcZoned = utcDateTime.atZone(ZoneOffset.UTC);
+
+		// Convert to requested timezone
+		ZonedDateTime targetZoned = utcZoned.withZoneSameInstant(ZoneId.of(timeZone));
+
+		return targetZoned.toLocalDateTime();
+	}
+
+
+	@PostMapping(ApplicationURIConstants.HOMEREQUESTLIST)
+	public ResponseEntity<Object> getAllRequestListForHomePage(@RequestBody TimeZoneRequestDto requestDto) {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
-
+			String timeZone = requestDto.getRequestedTimeZone();
 			User user = getLoggedInUser();
-			List<BookedCallDetailsDto> upcomingDtoList = new ArrayList<BookedCallDetailsDto>();
-			List<BookedCallDetailsDto> pendingDtoList = new ArrayList<BookedCallDetailsDto>();
-			List<FavoriteListenerDetailsDto> favListnerDtoList = new ArrayList<FavoriteListenerDetailsDto>();
+
+			List<BookedCallDetailsDto> upcomingDtoList = new ArrayList<>();
+			List<BookedCallDetailsDto> pendingDtoList = new ArrayList<>();
+			List<FavoriteListenerDetailsDto> favListnerDtoList = new ArrayList<>();
+			List<FavoriteListenerDetailsDto> sponserListenerList = new ArrayList<>();
 			HomePageAllRequestsDto homePageDto = new HomePageAllRequestsDto();
-			CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
+
+			CallerProfile caller = getServiceRegistry().getCallerProfileService()
+					.findByUserAndActiveTrue(user);
+
 			List<BookedCalls> upcomingbookedcalls = null;
 			List<BookedCalls> pendingCallRequests = null;
 			List<FavouriteListener> favListnereList = null;
-			List<FavoriteListenerDetailsDto> sponserListenerList = new ArrayList<>();
 			List<ListenerProfile> listenerProfiles = null;
-			// find upcoming call list
-			// find Pending Request List
-			// find favourite Listener list
-			List<String> listStatus = Arrays.asList(ApplicationConstants.PENDING, ApplicationConstants.RESCHEDULED);
+
+			List<String> listStatus = Arrays.asList(
+					ApplicationConstants.PENDING,
+					ApplicationConstants.RESCHEDULED
+			);
+
+			// --- CASE 1: CALLER
 			if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 				upcomingbookedcalls = getServiceRegistry().getBookedCallsService()
-						.findTop10ByCallerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(caller,
-								ApplicationConstants.ACCEPTED, ApplicationConstants.SCHEDULED);
+						.findTop10ByCallerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(
+								caller,
+								ApplicationConstants.ACCEPTED,
+								ApplicationConstants.SCHEDULED
+						);
+
 				pendingCallRequests = getServiceRegistry().getBookedCallsService()
 						.findTop10ByCallerProfileAndCallRequestStatusAndActiveTrue(caller, listStatus);
+
 				favListnereList = getServiceRegistry().getFavoriteListenerService()
 						.findTop10ByCallerIdAndActiveTrue(user.getId());
-				favListnereList = getCommonServices().filterBlockedFavouriteListeners(user, favListnereList); // removed
-				// user
+
+				favListnereList = getCommonServices().filterBlockedFavouriteListeners(user, favListnereList);
+
 				listenerProfiles = getServiceRegistry().getListenerProfileService()
 						.findTop10ActiveAdvertisementListeners(PageRequest.of(0, 10));
-				listenerProfiles = getCommonServices().filterBlockedListeners(user, listenerProfiles);
-				upcomingDtoList = getCommonServices().convertBeanToDtoForBookedCall(upcomingbookedcalls,
-						ApplicationConstants.CALL_REQUEST);
-				pendingDtoList = getCommonServices().convertBeanToDtoForBookedCall(pendingCallRequests,
-						ApplicationConstants.CALL_REQUEST);
-				LOGGER.info("pending size {}" + pendingDtoList.size() + " upcoming {}" + upcomingDtoList.size());
-				if (!ApplicationUtils.isEmpty(favListnereList)) {
 
+				listenerProfiles = getCommonServices().filterBlockedListeners(user, listenerProfiles);
+
+				// Convert to DTO
+				upcomingDtoList = getCommonServices()
+						.convertBeanToDtoForBookedCall(upcomingbookedcalls, ApplicationConstants.CALL_REQUEST);
+				pendingDtoList = getCommonServices()
+						.convertBeanToDtoForBookedCall(pendingCallRequests, ApplicationConstants.CALL_REQUEST);
+
+				// Convert times into requested timezone
+				upcomingDtoList.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
+				pendingDtoList.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
+
+				LOGGER.info("pending size {}" + pendingDtoList.size() + " upcoming {}" + upcomingDtoList.size());
+
+				if (!ApplicationUtils.isEmpty(favListnereList)) {
 					favListnereList.forEach(fav -> {
 						ListenerProfile listenerfav = getServiceRegistry().getListenerProfileService()
 								.findByUserAndActiveTrue(fav.getListener());
-						if (listenerfav != null)
+						if (listenerfav != null) {
 							favListnerDtoList.add(
-									getCommonServices().convertListenerProfileEntityToDtoForCardLayout(listenerfav));
+									getCommonServices().convertListenerProfileEntityToDtoForCardLayout(listenerfav)
+							);
+						}
 					});
 				}
 
 				if (!ApplicationUtils.isEmpty(listenerProfiles)) {
 					listenerProfiles.forEach(listener -> {
-						if (listener != null) {
-							if (!listener.getUser().getId().equals(user.getId())) {
-								sponserListenerList
-										.add(getCommonServices()
-												.convertListenerProfileEntityToDtoForCardLayout(listener));
-							}
+						if (listener != null && !listener.getUser().getId().equals(user.getId())) {
+							sponserListenerList.add(
+									getCommonServices().convertListenerProfileEntityToDtoForCardLayout(listener)
+							);
 						}
-
 					});
 				}
 			}
-			ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
+
+			// --- CASE 2: LISTENER
+			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+					.findByUserAndActiveTrue(user);
+
 			if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
 				upcomingbookedcalls = getServiceRegistry().getBookedCallsService()
-						.findTop10ByListenerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(listener,
-								ApplicationConstants.ACCEPTED, ApplicationConstants.SCHEDULED);
+						.findTop10ByListenerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(
+								listener,
+								ApplicationConstants.ACCEPTED,
+								ApplicationConstants.SCHEDULED
+						);
+
 				pendingCallRequests = getServiceRegistry().getBookedCallsService()
 						.findTop10ByListenerProfileAndCallRequestStatusAndActiveTrue(listener, listStatus);
+
 				upcomingDtoList = getCommonServices().convertBeanToDtoForBookedCallListener(upcomingbookedcalls);
 				pendingDtoList = getCommonServices().convertBeanToDtoForBookedCallListener(pendingCallRequests);
+
+				// Convert times into requested timezone
+				upcomingDtoList.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
+				pendingDtoList.forEach(dto -> dto.setBookingDateTime(
+						convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+				));
 			}
 
+			// --- Build final response
 			homePageDto.setPendingRequestList(pendingDtoList);
 			homePageDto.setUpcomigCallList(upcomingDtoList);
 			homePageDto.setFavouriteListenerList(favListnerDtoList);
@@ -797,6 +860,7 @@ public class ApiV1HomeController extends BaseController {
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
 
 	@PutMapping(ApplicationURIConstants.BOOKCALLUPDATE)
 	public ResponseEntity<Object> bookCallSendRequest(@PathVariable Long id,

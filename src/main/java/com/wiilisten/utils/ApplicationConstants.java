@@ -8,6 +8,9 @@ public class ApplicationConstants {
 	public static final String CALLED_LABEL = "CALLED";
 	public static final String EXCEPTION_LABEL = "EXCEPTION";
 	public static final String ERROR_LABEL = "ERROR";
+
+	public static final String REQUESTED_TIMEZONE = "requested_time_zone";
+
 	// SL4j end
 
 	public static final String PROPERTY_SOURCE_PATH = "classpath:messages.properties";
