@@ -831,7 +831,10 @@ public class ApiV1HomeController extends BaseController {
 
 			if (bookedCallDetailsDto.getBookingDateTime() != null
 					&& bookedCallDetailsDto.getDurationInMinutes() != null) {
-				existingCall.setBookingDateTime(bookedCallDetailsDto.getBookingDateTime());
+				ZonedDateTime istDateTime = bookedCallDetailsDto.getBookingDateTime()
+						.atZone(ZoneId.of(bookedCallDetailsDto.getRequestedTimeZone()));
+				ZonedDateTime utcDateTime = istDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+				existingCall.setBookingDateTime(utcDateTime.toLocalDateTime());
 				existingCall.setDurationInMinutes(bookedCallDetailsDto.getDurationInMinutes());
 				double subTotal = existingCall.getPrice() * bookedCallDetailsDto.getDurationInMinutes();
 
