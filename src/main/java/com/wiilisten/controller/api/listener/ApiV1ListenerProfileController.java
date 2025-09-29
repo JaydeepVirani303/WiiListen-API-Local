@@ -1,6 +1,7 @@
 package com.wiilisten.controller.api.listener;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -9,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.wiilisten.request.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -51,11 +53,6 @@ import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.ListenerSignupStepEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.enums.TrainingVideoProgressStatusEnum;
-import com.wiilisten.request.AvailabilityDTO;
-import com.wiilisten.request.ListnerProfileDTO;
-import com.wiilisten.request.TypeRequestDto;
-import com.wiilisten.request.UserDetail;
-import com.wiilisten.request.UserProfileDto;
 import com.wiilisten.response.TrainingMaterialResponseDto;
 import com.wiilisten.utils.ApplicationConstants;
 import com.wiilisten.utils.ApplicationURIConstants;
@@ -576,25 +573,58 @@ public class ApiV1ListenerProfileController extends BaseController {
 		return user;
 	}
 
+	private String convertUtcToTimeZone(String time, String targetZone) {
+		if (time == null || targetZone == null) return time;
+
+		// Parse only HH:mm
+		DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+		LocalTime localTime = LocalTime.parse(time, timeFormatter);
+
+		// Attach dummy date for conversion (important for crossing midnight)
+		LocalDate today = LocalDate.now();
+		LocalDateTime localDateTime = LocalDateTime.of(today, localTime);
+
+		// Treat this as UTC
+		ZonedDateTime utcZoned = localDateTime.atZone(ZoneOffset.UTC);
+
+		// Convert to target zone
+		ZonedDateTime targetZoned = utcZoned.withZoneSameInstant(ZoneId.of(targetZone));
+
+		// Return formatted time
+		return targetZoned.toLocalTime().format(timeFormatter);
+	}
+
 	@PostMapping(ApplicationURIConstants.RATE_AND_AVAILABILITY + ApplicationURIConstants.UPDATE)
 	public ResponseEntity<Object> ratesAndAvailabilityUpdate(@RequestBody ListnerProfileDTO requestProfileDetails) {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
+			String requestedTimeZone = requestProfileDetails.getRequestedTimeZone();
 			User user = getLoggedInUser();
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
 
 			user = updateProfilePicture(user, requestProfileDetails);
 			listener = updateRateAndAVailability(user, listener, requestProfileDetails);
 
-			List<AvailabilityDTO> dutyDetailsList = getCommonServices().generateResponseForListenerAvailability(user);
-//			if(dutyDetailsList == null) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
-//			}
-
 			UserProfileDto response = new UserProfileDto();
+
+			List<AvailabilityDTO> dutyDetailsList = getCommonServices().generateResponseForListenerAvailability(user);
+			if (dutyDetailsList != null) {
+				for (AvailabilityDTO availability : dutyDetailsList) {
+					for (DutyTimeRequestDto duty : availability.getDutyTimings()) {
+						duty.setStartTime(
+								convertUtcToTimeZone(duty.getStartTime(), requestedTimeZone)
+						);
+						duty.setEndTime(
+								convertUtcToTimeZone(duty.getEndTime(), requestedTimeZone)
+						);
+					}
+				}
+				response.setAvailability(dutyDetailsList);
+			}
+
+
 			response.setCallMaxDuration(listener.getCallMaxDuration());
 			response.setRatePerMinute(listener.getRatePerMinute());
 			response.setAvailability(dutyDetailsList);
