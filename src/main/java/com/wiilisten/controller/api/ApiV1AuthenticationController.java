@@ -1,10 +1,11 @@
 package com.wiilisten.controller.api;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import com.wiilisten.entity.*;
+import com.wiilisten.request.*;
 import com.wiilisten.response.PlanPurchaseDetailResponseDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,17 +30,6 @@ import com.wiilisten.enums.OtpTypeEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.enums.TwoStepVerificationStatusEnum;
 import com.wiilisten.enums.UserRoleEnum;
-import com.wiilisten.request.AdministrationAuthorityRequestDto;
-import com.wiilisten.request.AvailabilityDTO;
-import com.wiilisten.request.ChangePasswordRequestDto;
-import com.wiilisten.request.LoginRequest;
-import com.wiilisten.request.RegisterRequest;
-import com.wiilisten.request.SendOtpDto;
-import com.wiilisten.request.TwoStepVerificationDetailsDto;
-import com.wiilisten.request.TypeRequestDto;
-import com.wiilisten.request.UserDetail;
-import com.wiilisten.request.UserOtpDTO;
-import com.wiilisten.request.UserProfileDto;
 import com.wiilisten.response.AdminDetailsResponseDto;
 import com.wiilisten.response.LoginResponse;
 import com.wiilisten.utils.ApplicationConstants;
@@ -574,13 +564,35 @@ public class ApiV1AuthenticationController extends BaseController {
 		}
 	}
 
-	@GetMapping(ApplicationURIConstants.PROFILE)
-	public ResponseEntity<Object> userProfile() {
+	private String convertUtcToTimeZone(String time, String targetZone) {
+		if (time == null || targetZone == null) return time;
+
+		// Parse only HH:mm
+		DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+		LocalTime localTime = LocalTime.parse(time, timeFormatter);
+
+		// Attach dummy date for conversion (important for crossing midnight)
+		LocalDate today = LocalDate.now();
+		LocalDateTime localDateTime = LocalDateTime.of(today, localTime);
+
+		// Treat this as UTC
+		ZonedDateTime utcZoned = localDateTime.atZone(ZoneOffset.UTC);
+
+		// Convert to target zone
+		ZonedDateTime targetZoned = utcZoned.withZoneSameInstant(ZoneId.of(targetZone));
+
+		// Return formatted time
+		return targetZoned.toLocalTime().format(timeFormatter);
+	}
+
+
+	@PostMapping(ApplicationURIConstants.PROFILE)
+	public ResponseEntity<Object> userProfile(@RequestBody TimeZoneRequestDto timeZoneRequestDto) {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
-
+			String requestedTimeZone = timeZoneRequestDto.getRequestedTimeZone();
 			User user = getLoggedInUser();
 			if (user == null) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
@@ -631,10 +643,22 @@ public class ApiV1AuthenticationController extends BaseController {
 				} else
 					BeanUtils.copyProperties(listener, response, "gender", "education", "dateOfBirth", "location");
 
+
 				List<AvailabilityDTO> dutyDetailsList = getCommonServices()
 						.generateResponseForListenerAvailability(user);
-				if (dutyDetailsList != null)
+				if (dutyDetailsList != null) {
+					for (AvailabilityDTO availability : dutyDetailsList) {
+						for (DutyTimeRequestDto duty : availability.getDutyTimings()) {
+							duty.setStartTime(
+									convertUtcToTimeZone(duty.getStartTime(), requestedTimeZone)
+							);
+							duty.setEndTime(
+									convertUtcToTimeZone(duty.getEndTime(), requestedTimeZone)
+							);
+						}
+					}
 					response.setAvailability(dutyDetailsList);
+				}
 
 				ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
 						.findByUserAndActiveTrue(user);
