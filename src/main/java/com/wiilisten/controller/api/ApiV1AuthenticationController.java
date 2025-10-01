@@ -675,7 +675,7 @@ public class ApiV1AuthenticationController extends BaseController {
 
 			}
 			response.setId(user.getId());
-			response.setTimeZone(user.getTimeZone());
+			response.setTimeZone(requestedTimeZone);
 			response.setIsAccountSwittched(getCommonServices().isAccountSwitched(user));
 			
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
