@@ -231,15 +231,19 @@ public class ApiV1AdminPageContentController extends BaseController {
 		try {
 			TrainingMaterial trainingMaterial = getServiceRegistry().getTrainingMaterialService()
 					.findByIdAndActiveTrue(requestDto.getId());
-			int oldOrderNumber = trainingMaterial.getOrderNumber();
 			if (trainingMaterial == null) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices()
 						.generateBadResponseWithMessageKey(ErrorDataEnum.TRAINING_MATERIAL_NOT_EXIST.getCode()));
 			}
-			BeanUtils.copyProperties(requestDto, trainingMaterial,
-					getCommonServices().getNullPropertyNames(requestDto));
-			trainingMaterial.setOrderNumber(oldOrderNumber);
+
+			trainingMaterial.setTitle(requestDto.getTitle());
+			trainingMaterial.setThumbnailImage(requestDto.getThumbnailImage());
+			trainingMaterial.setContentUrl(requestDto.getContentUrl());
+			trainingMaterial.setContentType(requestDto.getContentType());
+			trainingMaterial.setDescription(requestDto.getDescription());
+			trainingMaterial.setMaterialFileType(requestDto.getMaterialFileType());
+			trainingMaterial.setSubCategory(requestDto.getSubCategory());
 			getServiceRegistry().getTrainingMaterialService().saveORupdate(trainingMaterial);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
