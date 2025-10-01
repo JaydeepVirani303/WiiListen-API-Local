@@ -68,6 +68,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 	@Value("${stripe.SecretKey}")
 	private String StripeKey;
 
+	//	TODO
 	@PostMapping(ApplicationURIConstants.UPDATE)
 	public ResponseEntity<Object> listnerProfile(@RequestBody ListnerProfileDTO requestProfileDetails) {
 
@@ -420,7 +421,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			ListnerProfileDTO requestProfileDetails) {
 		listener.setCallMaxDuration(requestProfileDetails.getMaxDuration());
 		listener.setRatePerMinute(Double.valueOf(requestProfileDetails.getPrice()));
-		String listenerTimeZone = requestProfileDetails.getTimeZone();
+		String listenerTimeZone = requestProfileDetails.getRequestedTimeZone();
 //		storing new availabilities for new listener
 		if (!user.getIsProfileSet()) {
 			requestProfileDetails.getAvailability().forEach(dayWiseDuty -> {
@@ -431,12 +432,16 @@ public class ApiV1ListenerProfileController extends BaseController {
 					listenerAvailability.setTimeZone(listenerTimeZone);
 					listenerAvailability.setUser(user);
 					listenerAvailability.setWeekDay(dayWiseDuty.getDay());
-					listenerAvailability.setStartTime(ApplicationUtils.StringToLocalTime(dutyTiming.getStartTime(),
-							ApplicationConstants.TIME_FORMAT_HH_MM));
-					listenerAvailability.setEndTime(ApplicationUtils.StringToLocalTime(dutyTiming.getEndTime(),
-							ApplicationConstants.TIME_FORMAT_HH_MM));
-					listenerAvailability.setActive(true);
+					LocalTime startLocalTime = ApplicationUtils.StringToLocalTime(dutyTiming.getStartTime(),
+							ApplicationConstants.TIME_FORMAT_HH_MM);
+					LocalTime endLocalTime = ApplicationUtils.StringToLocalTime(dutyTiming.getEndTime(),
+							ApplicationConstants.TIME_FORMAT_HH_MM);
 
+					LocalTime startUTC = convertLocalTimeToUTC(startLocalTime, listenerTimeZone);
+					LocalTime endUTC = convertLocalTimeToUTC(endLocalTime, listenerTimeZone);
+					listenerAvailability.setActive(true);
+					listenerAvailability.setStartTime(startUTC);
+					listenerAvailability.setEndTime(endUTC);
 					getServiceRegistry().getListenerAvailabilityService().saveORupdate(listenerAvailability);
 
 				});
@@ -494,7 +499,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_3.getValue());
 
 		// Add LISTENER timezone
-		user.setTimeZone(requestProfileDetails.getTimeZone());
+		user.setTimeZone(listenerTimeZone);
 		getServiceRegistry().getUserService().saveORupdate(user);
 		listener = getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 
@@ -634,7 +639,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			}
 
 			// added Listener time zone
-			user.setTimeZone(requestProfileDetails.getTimeZone());
+			user.setTimeZone(requestedTimeZone);
 			getServiceRegistry().getUserService().saveORupdate(user);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
