@@ -6,71 +6,82 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
 public class DownloadZipFileServiceImpl extends BaseServiceImpl<CallerProfile, Long> implements DownloadZipFileService {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(DownloadZipFileServiceImpl.class);
 
+    /**
+     * Adds a file (W9 or ID Proof) into the ZIP stream with proper structure.
+     */
     @Override
-    public void processFileForZip(ZipOutputStream zos, String fileUrl, String filePrefix, Long userId) {
-        if (fileUrl == null || fileUrl.isBlank()) {
-            LOGGER.warn("Skipped {} because fileUrl is null or empty", filePrefix);
+    public void addFileToZip(ZipOutputStream zos, String filePath, String fileType,
+                             Long userId, String firstName, String lastName) {
+
+        if (filePath == null || filePath.isEmpty()) {
+            LOGGER.warn("Empty file path for user {}", userId);
             return;
         }
 
+        InputStream inputStream = null;
+
         try {
-
-            if (userId == null) {
-                LOGGER.warn("Skipped {} because userId could not be extracted from URL: {}", filePrefix, fileUrl);
-                return;
+            if (filePath.startsWith("http")) {
+                // ✅ Handle remote (S3) file
+                URL url = new URL(filePath);
+                inputStream = url.openStream();
+            } else {
+                // ✅ Handle local file
+                File file = new File(filePath);
+                if (!file.exists()) {
+                    LOGGER.warn("Local file not found for user {}: {}", userId, filePath);
+                    return;
+                }
+                inputStream = new FileInputStream(file);
             }
 
-            byte[] fileContent = downloadFileFromUrl(fileUrl);
-            if (fileContent == null || fileContent.length == 0) {
-                LOGGER.warn("Skipped {} because file content is empty for URL: {}", filePrefix, fileUrl);
-                return;
-            }
+            String suffix = fileType.equalsIgnoreCase("w9Form") ? "w9s" : "id";
+            String ext = getFileExtension(filePath);
+            if (ext == null) ext = "pdf";
 
-            String fileName = filePrefix + getFileExtension(fileUrl);
-            zos.putNextEntry(new ZipEntry("Document/" + userId + "/" + fileName));
-            zos.write(fileContent);
+            // ✅ Folder + filename format: w9s_report/{userId}_{fname}_{lname}_{suffix}.{ext}
+            String entryName = "w9s_report/" + userId + "_" + firstName + "_" + lastName + "_" + suffix + "." + ext;
+
+            LOGGER.info("Adding to ZIP: {}", entryName);
+            zos.putNextEntry(new ZipEntry(entryName));
+
+            inputStream.transferTo(zos);
             zos.closeEntry();
 
-            LOGGER.info("Added {} for userId={} from URL={}", filePrefix, userId, fileUrl);
-
         } catch (Exception e) {
-            LOGGER.error("Error processing {} from URL {}: {}", filePrefix, fileUrl, e.getMessage(), e);
+            LOGGER.error("Failed to add file to ZIP for user {}: {}", userId, e.getMessage(), e);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException ignore) {
+                }
+            }
         }
+    }
+
+    /**
+     * Returns safe name (lowercase, no spaces)
+     */
+    @Override
+    public String sanitizeName(String name) {
+        if (name == null) return "";
+        return name.trim().toLowerCase().replaceAll("\\s+", "_");
     }
 
     @Override
-    public byte[] downloadFileFromUrl(String fileUrl) {
-        try (InputStream in = new URL(fileUrl).openStream();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            in.transferTo(baos);
-            return baos.toByteArray();
-        } catch (IOException e) {
-            LOGGER.error("Error downloading file from URL {}: {}", fileUrl, e.getMessage(), e);
-            return null;
-        }
+    public String getFileExtension(String fileName) {
+        int lastDot = fileName.lastIndexOf('.');
+        return (lastDot == -1) ? null : fileName.substring(lastDot + 1).toLowerCase();
     }
 
-    @Override
-    public String getFileExtension(String fileUrl) {
-        try {
-            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            int dotIndex = fileName.lastIndexOf(".");
-            return (dotIndex != -1) ? fileName.substring(dotIndex) : "";
-        } catch (Exception e) {
-            LOGGER.error("Error extracting file extension from URL {}: {}", fileUrl, e.getMessage(), e);
-            return "";
-        }
-    }
 }
