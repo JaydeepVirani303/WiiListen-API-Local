@@ -16,14 +16,14 @@ public interface BookedCallsService extends BaseService<BookedCalls, Long> {
 
 	List<BookedCalls> findByBookingDateTimeAndListenerAndActiveTrue(LocalDate bookingTime, ListenerProfile listener);
 
-	Page<BookedCalls> findByCallerProfileAndCallRequestStatusAndActiveTrue(CallerProfile caller,
+	Page<BookedCalls> findByCallerProfileAndCallRequestStatusInAndActiveTrue(CallerProfile caller,
 			List<String> listStatus, Pageable pageable);
 
 	Page<BookedCalls> findByCallerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(CallerProfile caller,
 			String callRequestStatus, String callStatus, Pageable pageable);
 
-	Page<BookedCalls> findByListenerProfileAndCallRequestStatusAndActiveTrue(ListenerProfile listener,
-			String requestStatus, Pageable pageable);
+	Page<BookedCalls> findByListenerProfileAndCallRequestStatusInAndActiveTrue(ListenerProfile listener,
+																			   List<String> requestStatus, Pageable pageable);
 
 	Page<BookedCalls> findByListenerProfileAndCallRequestStatusAndCallStatusAndActiveTrue(ListenerProfile listener,
 			String callRequestStatus, String callStatus, Pageable pageable);
