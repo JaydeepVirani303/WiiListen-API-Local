@@ -2,9 +2,11 @@ package com.wiilisten.controller.api.admin;
 
 import com.wiilisten.controller.BaseController;
 import com.wiilisten.entity.ListenerProfile;
+import com.wiilisten.service.impl.DownloadZipFileServiceImpl;
 import com.wiilisten.utils.ApplicationURIConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,9 +18,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
@@ -29,6 +33,9 @@ import java.util.zip.ZipOutputStream;
 @RestController
 @RequestMapping(value = ApplicationURIConstants.API + ApplicationURIConstants.V1 + ApplicationURIConstants.ADMIN + ApplicationURIConstants.REPORT)
 public class ApiV1AdminReportDownloadController extends BaseController {
+
+    @Autowired
+    DownloadZipFileServiceImpl downloadZipFileService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiV1AdminReportDownloadController.class);
 
@@ -150,8 +157,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
                     .findProfilesByCreatedAtBetweenAndMinEarning(startDate, endDate, 600.0);
         } catch (Exception e) {
             LOGGER.error("Failed to fetch listener profiles from database: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
 
         if (listenerProfileList == null || listenerProfileList.isEmpty()) {
@@ -175,20 +181,28 @@ public class ApiV1AdminReportDownloadController extends BaseController {
                     continue;
                 }
 
-                try {
-                    getServiceRegistry()
-                            .getDownloadZipFileService()
-                            .processFileForZip(zos, listenerProfile.getIdProof(), "idProof", listenerProfile.getId());
-                } catch (Exception e) {
-                    LOGGER.error("Failed to process ID Proof for listenerProfile id={}: {}", listenerProfile.getId(), e.getMessage(), e);
-                }
+                Long userId = listenerProfile.getId();
+                String firstName = downloadZipFileService.sanitizeName(listenerProfile.getUserName());
+                String lastName = downloadZipFileService.sanitizeName(listenerProfile.getUserName());
 
+                // ======== Process W9 Form ========
                 try {
-                    getServiceRegistry()
-                            .getDownloadZipFileService()
-                            .processFileForZip(zos, listenerProfile.getW9Form(), "w9Form", listenerProfile.getId());
+                    String w9Path = listenerProfile.getW9Form();
+                    if (w9Path != null && !w9Path.isEmpty()) {
+                        downloadZipFileService.addFileToZip(zos, w9Path, "w9Form", userId, firstName, lastName);
+                    }
                 } catch (Exception e) {
                     LOGGER.error("Failed to process W9 Form for listenerProfile id={}: {}", listenerProfile.getId(), e.getMessage(), e);
+                }
+
+                // ======== Process ID Proof ========
+                try {
+                    String idPath = listenerProfile.getIdProof();
+                    if (idPath != null && !idPath.isEmpty()) {
+                        downloadZipFileService.addFileToZip(zos, idPath, "idProof", userId, firstName, lastName);
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to process ID Proof for listenerProfile id={}: {}", listenerProfile.getId(), e.getMessage(), e);
                 }
             }
 
