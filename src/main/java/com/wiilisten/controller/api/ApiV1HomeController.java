@@ -669,7 +669,7 @@ public class ApiV1HomeController extends BaseController {
 			requestDetails.setSortType("DESC");
 		Pageable pageable = getCommonServices().convertRequestToPageableObject(requestDetails);
 		try {
-
+            String timeZone = requestDetails.getRequestedTimeZone();
 			User user = getLoggedInUser();
 			List<BookedCallDetailsDto> responseData = new ArrayList<BookedCallDetailsDto>();
 			CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
@@ -685,6 +685,9 @@ public class ApiV1HomeController extends BaseController {
 				} else {
 					responseData = getCommonServices().convertBeanToDtoForBookedCall(bookedcalls.getContent(),
 							ApplicationConstants.CALL_REQUEST);
+                    responseData.forEach(dto -> dto.setBookingDateTime(
+                            convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+                    ));
 				}
 			}
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService().findByUserAndActiveTrue(user);
@@ -698,6 +701,9 @@ public class ApiV1HomeController extends BaseController {
 					return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
 				} else {
 					responseData = getCommonServices().convertBeanToDtoForBookedCallListener(bookedcalls.getContent());
+                    responseData.forEach(dto -> dto.setBookingDateTime(
+                            convertUtcToTimeZone(dto.getBookingDateTime(), timeZone)
+                    ));
 				}
 			}
 
