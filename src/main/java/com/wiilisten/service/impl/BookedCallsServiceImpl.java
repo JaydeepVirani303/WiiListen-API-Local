@@ -25,7 +25,7 @@ public class BookedCallsServiceImpl extends BaseServiceImpl<BookedCalls, Long> i
 	}
 
 	@Override
-	public Page<BookedCalls> findByCallerProfileAndCallRequestStatusAndActiveTrue(CallerProfile caller,
+	public Page<BookedCalls> findByCallerProfileAndCallRequestStatusInAndActiveTrue(CallerProfile caller,
 			List<String> requestStatus, Pageable pageable) {
 		return getDaoFactory().getBookedCallsRepository()
 				.findByCallerAndCallRequestStatusInAndActiveTrueOrderByCreatedAtDesc(caller, requestStatus, pageable);
@@ -49,11 +49,11 @@ public class BookedCallsServiceImpl extends BaseServiceImpl<BookedCalls, Long> i
 	}
 
 	@Override
-	public Page<BookedCalls> findByListenerProfileAndCallRequestStatusAndActiveTrue(ListenerProfile listener,
-			String requestStatus, Pageable pageable) {
+	public Page<BookedCalls> findByListenerProfileAndCallRequestStatusInAndActiveTrue(ListenerProfile listener,
+																					  List<String> requestStatus, Pageable pageable) {
 		// TODO Auto-generated method stub
 		return getDaoFactory().getBookedCallsRepository()
-				.findByListenerAndCallRequestStatusAndActiveTrueOrderByCreatedAtDesc(listener, requestStatus, pageable);
+				.findByListenerAndCallRequestStatusInAndActiveTrueOrderByCreatedAtDesc(listener, requestStatus, pageable);
 	}
 
 	@Override

@@ -26,8 +26,8 @@ public interface BookedCallsRepository extends BaseRepository<BookedCalls, Long>
 	Page<BookedCalls> findByCallerAndCallRequestStatusAndCallStatusAndActiveTrueOrderByCreatedAtDesc(
 			CallerProfile caller, String callRequestStatus, String callStatus, Pageable pageable);
 
-	Page<BookedCalls> findByListenerAndCallRequestStatusAndActiveTrueOrderByCreatedAtDesc(ListenerProfile listener,
-			String requestStatus, Pageable pageable);
+	Page<BookedCalls> findByListenerAndCallRequestStatusInAndActiveTrueOrderByCreatedAtDesc(ListenerProfile listener,
+																							List<String> requestStatus, Pageable pageable);
 
 	Page<BookedCalls> findByListenerAndCallRequestStatusAndCallStatusAndActiveTrueOrderByCreatedAtDesc(
 			ListenerProfile listener, String callRequestStatus, String callStatus, Pageable pageable);

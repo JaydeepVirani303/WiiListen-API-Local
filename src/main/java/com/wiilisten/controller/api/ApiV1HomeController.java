@@ -593,6 +593,8 @@ public class ApiV1HomeController extends BaseController {
 			@RequestBody PaginationAndSortingDetails requestDetails) {
 
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+		List<String> statuses = Arrays.asList(ApplicationConstants.PENDING, ApplicationConstants.RESCHEDULED);
+
 		Page<BookedCalls> bookedcalls = null;
 
 		try {
@@ -609,10 +611,9 @@ public class ApiV1HomeController extends BaseController {
 			// --- CASE 1: CALLER
 			if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 				LOGGER.info("inside caller");
-				List<String> listStatus = Arrays.asList(ApplicationConstants.PENDING, ApplicationConstants.RESCHEDULED);
 
 				bookedcalls = getServiceRegistry().getBookedCallsService()
-						.findByCallerProfileAndCallRequestStatusAndActiveTrue(caller, listStatus, pageable);
+						.findByCallerProfileAndCallRequestStatusInAndActiveTrue(caller, statuses, pageable);
 
 				if (bookedcalls == null || bookedcalls.isEmpty()) {
 					LOGGER.info(ApplicationConstants.EXIT_LABEL);
@@ -633,9 +634,8 @@ public class ApiV1HomeController extends BaseController {
 			if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
 				LOGGER.info("inside listener");
 				bookedcalls = getServiceRegistry().getBookedCallsService()
-						.findByListenerProfileAndCallRequestStatusAndActiveTrue(listener, ApplicationConstants.PENDING,
+						.findByListenerProfileAndCallRequestStatusInAndActiveTrue(listener, statuses,
 								pageable);
-
 				if (bookedcalls == null || bookedcalls.isEmpty()) {
 					LOGGER.info(ApplicationConstants.EXIT_LABEL);
 					return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
