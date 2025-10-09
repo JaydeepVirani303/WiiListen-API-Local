@@ -182,14 +182,13 @@ public class ApiV1AdminReportDownloadController extends BaseController {
                 }
 
                 Long userId = listenerProfile.getId();
-                String firstName = downloadZipFileService.sanitizeName(listenerProfile.getUserName());
-                String lastName = downloadZipFileService.sanitizeName(listenerProfile.getUserName());
+                String userName = downloadZipFileService.sanitizeName(listenerProfile.getUserName());
 
                 // ======== Process W9 Form ========
                 try {
                     String w9Path = listenerProfile.getW9Form();
                     if (w9Path != null && !w9Path.isEmpty()) {
-                        downloadZipFileService.addFileToZip(zos, w9Path, "w9Form", userId, firstName, lastName);
+                        downloadZipFileService.addFileToZip(zos, w9Path, "w9Form", userId, userName);
                     }
                 } catch (Exception e) {
                     LOGGER.error("Failed to process W9 Form for listenerProfile id={}: {}", listenerProfile.getId(), e.getMessage(), e);
@@ -199,7 +198,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
                 try {
                     String idPath = listenerProfile.getIdProof();
                     if (idPath != null && !idPath.isEmpty()) {
-                        downloadZipFileService.addFileToZip(zos, idPath, "idProof", userId, firstName, lastName);
+                        downloadZipFileService.addFileToZip(zos, idPath, "idProof", userId, userName);
                     }
                 } catch (Exception e) {
                     LOGGER.error("Failed to process ID Proof for listenerProfile id={}: {}", listenerProfile.getId(), e.getMessage(), e);

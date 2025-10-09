@@ -23,7 +23,7 @@ public class DownloadZipFileServiceImpl extends BaseServiceImpl<CallerProfile, L
      */
     @Override
     public void addFileToZip(ZipOutputStream zos, String filePath, String fileType,
-                             Long userId, String firstName, String lastName) {
+                             Long userId, String userName) {
 
         if (filePath == null || filePath.isEmpty()) {
             LOGGER.warn("Empty file path for user {}", userId);
@@ -50,7 +50,7 @@ public class DownloadZipFileServiceImpl extends BaseServiceImpl<CallerProfile, L
             String ext = getFileExtension(filePath);
             if (ext == null) ext = "pdf";
 
-            String entryName = "w9s_report/" + userId + "_" + firstName + "_" + lastName + "_" + suffix + "." + ext;
+            String entryName = "w9s_report/" + userId + "_" + userName + "_" + suffix + "." + ext;
 
             InputStream finalInputStream = inputStream;
 
