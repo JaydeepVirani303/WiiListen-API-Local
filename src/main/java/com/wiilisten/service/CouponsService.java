@@ -20,4 +20,6 @@ public interface CouponsService {
     boolean deleteCoupon(Long id);
 
     String applyCoupon(ApplyCouponRequest request);
+
+    boolean checkValidCoupon(ApplyCouponRequest request);
 }

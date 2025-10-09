@@ -133,4 +133,24 @@ public class CouponsServiceImpl implements CouponsService {
 
         return "Coupon applied successfully! Enjoy your discount.";
     }
+
+    @Override
+    public boolean checkValidCoupon(ApplyCouponRequest request) {
+        Optional<Coupons> optionalCoupon = couponsRepository.findByCouponCode(request.getCouponCode());
+        if (optionalCoupon.isEmpty()) {
+            return false;
+        }
+        Coupons coupon = optionalCoupon.get();
+        if (!coupon.getActive()) {
+            return false;
+        }
+        if (coupon.getEndDate().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCoupon(request.getUserId(), coupon).isPresent();
+        if (alreadyUsed) {
+            return false;
+        }
+        return true;
+    }
 }

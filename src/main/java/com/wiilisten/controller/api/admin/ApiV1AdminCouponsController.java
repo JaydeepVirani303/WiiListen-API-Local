@@ -82,4 +82,15 @@ public class ApiV1AdminCouponsController {
         String message = couponsService.applyCoupon(request);
         return ResponseEntity.ok(message);
     }
+
+    // --- Validate Coupon ---
+    @PostMapping(ApplicationURIConstants.VERIFY)
+    public ResponseEntity<String> validateCoupon(@RequestBody ApplyCouponRequest request) {
+        boolean status = couponsService.checkValidCoupon(request);
+        if (status) {
+            return ResponseEntity.ok("Coupon is valid");
+        } else {
+            return ResponseEntity.ok("Coupon is not valid");
+        }
+    }
 }
