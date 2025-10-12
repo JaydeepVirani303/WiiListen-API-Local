@@ -40,8 +40,8 @@ public class ListnerProfileDTO {
 	private String location;
 	
 	private String videoProgress;
-	
-	private String w9Form;
+
+	private String w9form;
 	
 	private String idproof;
 	

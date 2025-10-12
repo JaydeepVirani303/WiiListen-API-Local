@@ -117,6 +117,8 @@ public class BookedCalls {
 	@UpdateTimestamp
 	@Temporal(value = TemporalType.TIMESTAMP)
 	private Date updatedAt;
+
+	private Long couponId;
 	
 	@PrePersist
 	public void prePersist() {

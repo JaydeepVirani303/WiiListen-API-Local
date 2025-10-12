@@ -159,4 +159,7 @@ public class ListenerResponseDto {
 	@JsonProperty("updated_at")
 	private Date updatedAt;
 
+	@JsonProperty("w9s_url")
+	private String w9sUrl;
+
 }

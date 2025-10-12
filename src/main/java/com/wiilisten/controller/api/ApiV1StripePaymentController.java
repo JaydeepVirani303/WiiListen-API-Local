@@ -8,6 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.enums.CouponType;
+import com.wiilisten.repo.CouponsRepository;
+import com.wiilisten.request.ApplyCouponRequest;
+import com.wiilisten.service.CouponsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stripe.model.Customer;
 import com.stripe.model.PaymentIntent;
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.AdministrativeNotification;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.EarningHistory;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.Subscription;
-import com.wiilisten.entity.User;
-import com.wiilisten.entity.UserSubscription;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.enums.UserRoleEnum;
@@ -56,6 +53,12 @@ public class ApiV1StripePaymentController extends BaseController {
 
 	@Autowired
 	private PaymentService paymentService;
+
+	@Autowired
+	private CouponsRepository couponsRepository;
+
+	@Autowired
+	private CouponsService couponsService;
 
 	@PostMapping(ApplicationURIConstants.PAYMENT_INTENT)
 	public ResponseEntity<Object> createPaymentIntent(@RequestBody BookedCallDetailsDto bookedCallDetailsDto)
@@ -88,10 +91,9 @@ public class ApiV1StripePaymentController extends BaseController {
 		double subTotal;
 		if (bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.QUICK_CALL)
 				|| (bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.ON_DEMAND))) {
-			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration());
-		}
-
-		else {
+//			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration());
+			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration()) * listener.getRatePerMinute();
+		} else {
 			subTotal = listener.getRatePerMinute() * bookedCallDetailsDto.getDurationInMinutes();
 		}
 		finalamount = subTotal;
@@ -103,7 +105,7 @@ public class ApiV1StripePaymentController extends BaseController {
 		}
 
 		finalamount = Math.round(finalamount * 100.0) / 100.0;
-		subTotal = Math.round(subTotal * 100.0) / 100.0;
+
 		PaymentIntenetResponseDto paymentIntenetResponseDto = new PaymentIntenetResponseDto();
 		if (user.getStripeCustomerId() == null) {
 			// create customerid if not exist
@@ -117,10 +119,41 @@ public class ApiV1StripePaymentController extends BaseController {
 		// create ephemeralKey
 		String ephemeralKey = getServiceRegistry().getPaymentService().getEphemeralKey(user.getStripeCustomerId());
 		PaymentIntent intent = null;
-	
+
+		Long couponId = bookedCallDetailsDto.getCouponId();
+		boolean exists = false;
+		if (couponId != null) {
+			exists = couponsRepository.findById(couponId).isPresent();
+		}
+		long amount = finalamount.longValue();
+
+		if (exists) {
+			Coupons optionalCoupon = couponsRepository.findById(couponId).get();
+			CouponType couponType = optionalCoupon.getCouponType();
+			double couponDiscount = 0;
+
+			if (couponType.equals(CouponType.FLAT)) {
+				couponDiscount = optionalCoupon.getCouponAmount();
+				amount = (long) (amount - couponDiscount);
+			} else if (couponType.equals(CouponType.PERCENTAGE)) {
+				couponDiscount = optionalCoupon.getCouponAmount();
+				double discount = (amount * couponDiscount) / 100;
+				amount = (long) (amount - discount);
+			}
+			intent = getServiceRegistry().getPaymentService().createPaymentIntenet(amount,
+					user.getStripeCustomerId());
+			//here marked as use coupon
+			ApplyCouponRequest request = new ApplyCouponRequest(user.getId(), bookedCallDetailsDto.getCouponId());
+			couponsService.applyCoupon(request);
+		} else {
+			intent = getServiceRegistry().getPaymentService().createPaymentIntenet(amount,
+					user.getStripeCustomerId());
+		}
+
+
+
 		// paymentIntent create and hold
-		intent = getServiceRegistry().getPaymentService().createPaymentIntenet(finalamount.longValue() * 100,
-				user.getStripeCustomerId());
+
 		if (intent != null) {
 			user.setPaymentIntent(intent.getId());
 			user = getServiceRegistry().getUserService().saveORupdate(user);
@@ -129,6 +162,7 @@ public class ApiV1StripePaymentController extends BaseController {
 			CallerProfile callerProfile = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
 
 			BookedCalls bookedCall = new BookedCalls();
+			bookedCall.setCouponId(bookedCallDetailsDto.getCouponId());
 			bookedCall.setCaller(callerProfile);
 			bookedCall.setListener(listener);
 			bookedCall.setActive(true);
@@ -165,7 +199,7 @@ public class ApiV1StripePaymentController extends BaseController {
 		paymentIntenetResponseDto.setPaymentSuccess(false);
 		paymentIntenetResponseDto.setListenerId(listener.getId());
 		paymentIntenetResponseDto.setCallMaxDuration(listener.getCallMaxDuration());
-		paymentIntenetResponseDto.setFinalAmount(finalamount);
+		paymentIntenetResponseDto.setFinalAmount((double) amount);
 
 		LOGGER.info(ApplicationConstants.EXIT_LABEL);
 		return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(paymentIntenetResponseDto));

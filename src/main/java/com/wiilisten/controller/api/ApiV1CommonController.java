@@ -3,9 +3,14 @@ package com.wiilisten.controller.api;
 import java.time.*;
 import java.util.*;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.request.*;
+import com.wiilisten.response.*;
+import com.wiilisten.service.CouponsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -16,31 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.BlockedUser;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CommissionRate;
-import com.wiilisten.entity.Coupon;
-import com.wiilisten.entity.ListenerAvailability;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.Subscription;
-import com.wiilisten.entity.User;
-import com.wiilisten.entity.UserRatingAndReview;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
-import com.wiilisten.request.BlockedUserRequestDto;
-import com.wiilisten.request.BookedCallDto;
-import com.wiilisten.request.IdRequestDto;
-import com.wiilisten.request.IdStatusRequestDto;
-import com.wiilisten.request.PaginationAndSortingDetails;
-import com.wiilisten.request.TimeSlotDto;
-import com.wiilisten.request.TypeRequestDto;
-import com.wiilisten.response.AvailabilityResponseDto;
-import com.wiilisten.response.CommissionRateResponseDto;
-import com.wiilisten.response.CouponResponseDto;
-import com.wiilisten.response.FileResponseDto;
-import com.wiilisten.response.ReviewsAndRatingsResponseDto;
-import com.wiilisten.response.SubscriptionResponseDto;
-import com.wiilisten.response.TotalReviewAndRatingResponseDto;
 import com.wiilisten.utils.ApplicationConstants;
 import com.wiilisten.utils.ApplicationURIConstants;
 import com.wiilisten.utils.ApplicationUtils;
@@ -48,6 +30,9 @@ import com.wiilisten.utils.ApplicationUtils;
 @RestController
 @RequestMapping(value = ApplicationURIConstants.API + ApplicationURIConstants.V1 + ApplicationURIConstants.COMMON)
 public class ApiV1CommonController extends BaseController {
+
+	@Autowired
+	CouponsService couponsService;
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(ApiV1CommonController.class);
 
@@ -84,27 +69,37 @@ public class ApiV1CommonController extends BaseController {
 	}
 
 
+//	@PostMapping(ApplicationURIConstants.COUPON + ApplicationURIConstants.VERIFY)
+//	public ResponseEntity<Object> appliedCoupon(@RequestBody IdStatusRequestDto idStatusRequestDto) {
+//
+//		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+//
+//		try {
+//			Coupon coupon = getServiceRegistry().getCouponService()
+//					.findByCodeAndActiveTrue(idStatusRequestDto.getType());
+//			if (coupon == null) {
+//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+//				return ResponseEntity.ok(getCommonServices()
+//						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_COUPON_CODE.getCode()));
+//			}
+//			CouponResponseDto response = new CouponResponseDto();
+//			LOGGER.info("amount is {}" + coupon.getAmount());
+//			response.setAmount(coupon.getAmount());
+//
+//			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
+//		} catch (Exception e) {
+//			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+//			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+//		}
+//	}
+
 	@PostMapping(ApplicationURIConstants.COUPON + ApplicationURIConstants.VERIFY)
-	public ResponseEntity<Object> appliedCoupon(@RequestBody IdStatusRequestDto idStatusRequestDto) {
-
-		LOGGER.info(ApplicationConstants.ENTER_LABEL);
-
-		try {
-			Coupon coupon = getServiceRegistry().getCouponService()
-					.findByCodeAndActiveTrue(idStatusRequestDto.getType());
-			if (coupon == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(getCommonServices()
-						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_COUPON_CODE.getCode()));
-			}
-			CouponResponseDto response = new CouponResponseDto();
-			LOGGER.info("amount is {}" + coupon.getAmount());
-			response.setAmount(coupon.getAmount());
-
-			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
-		} catch (Exception e) {
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
-			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+	public ResponseEntity<Object> validateCoupon(@RequestBody ValidCouponRequest request) {
+		Coupons coupons = couponsService.checkValidCoupon(request);
+		if (coupons != null) {
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(coupons));
+		} else {
+			return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
 		}
 	}
 

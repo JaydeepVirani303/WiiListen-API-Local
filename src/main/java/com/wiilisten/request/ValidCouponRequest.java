@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApplyCouponRequest {
+public class ValidCouponRequest {
     private Long userId;
-    private Long couponId;
+    private String couponCode;
 }
 

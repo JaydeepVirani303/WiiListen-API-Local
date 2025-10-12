@@ -29,4 +29,4 @@ public class CouponsRequestDTO {
 
     private LocalDateTime updatedAt = LocalDateTime.now();
 }
-
+    

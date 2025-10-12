@@ -6,13 +6,17 @@ import com.wiilisten.repo.CouponsRepository;
 import com.wiilisten.repo.UsedCouponRepository;
 import com.wiilisten.request.ApplyCouponRequest;
 import com.wiilisten.request.CouponsRequestDTO;
+import com.wiilisten.request.ValidCouponRequest;
 import com.wiilisten.response.CouponsResponseDTO;
+import com.wiilisten.response.ValidCouponResponse;
 import com.wiilisten.service.CouponsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -25,7 +29,7 @@ public class CouponsServiceImpl implements CouponsService {
 
     @Override
     public CouponsResponseDTO createCoupon(CouponsRequestDTO requestDTO) {
-        boolean exists = couponsRepository.findByCouponCode(requestDTO.getCouponCode()).isPresent();
+        boolean exists = couponsRepository.existsByCouponCodeAndActive(requestDTO.getCouponCode(), true);
         if (exists) return null;
 
         Coupons coupon = mapToEntity(requestDTO);
@@ -48,27 +52,83 @@ public class CouponsServiceImpl implements CouponsService {
     }
 
     @Override
+    public CouponsResponseDTO getCouponById(Long id) {
+        Optional<Coupons> coupon = couponsRepository.findById(id);
+        return coupon.map(this::mapToDTO).orElse(null);
+    }
+
+    @Override
     public Optional<CouponsResponseDTO> updateCoupon(Long id, CouponsRequestDTO requestDTO) {
         return couponsRepository.findById(id).map(existing -> {
-            existing.setCouponCode(requestDTO.getCouponCode());
-            existing.setStartDate(requestDTO.getStartDate());
-            existing.setEndDate(requestDTO.getEndDate());
-            existing.setCouponType(requestDTO.getCouponType());
-            existing.setCouponAmount(requestDTO.getCouponAmount());
-            existing.setActive(requestDTO.getActive());
+
+            if (requestDTO.getCouponCode() != null)
+                existing.setCouponCode(requestDTO.getCouponCode());
+
+            if (requestDTO.getStartDate() != null)
+                existing.setStartDate(requestDTO.getStartDate());
+
+            if (requestDTO.getEndDate() != null)
+                existing.setEndDate(requestDTO.getEndDate());
+
+            if (requestDTO.getCouponType() != null)
+                existing.setCouponType(requestDTO.getCouponType());
+
+            if (requestDTO.getCouponAmount() != null)
+                existing.setCouponAmount(requestDTO.getCouponAmount());
+
+            if (requestDTO.getActive() != null)
+                existing.setActive(requestDTO.getActive());
+
             existing.setUpdatedAt(LocalDateTime.now());
             return mapToDTO(couponsRepository.save(existing));
         });
     }
 
+
+//    @Override
+//    public boolean deleteCoupon(Long id) {
+//        if (couponsRepository.existsById(id)) {
+//            couponsRepository.deleteById(id);
+//            return true;
+//        }
+//        return false;
+//    }
+
     @Override
-    public boolean deleteCoupon(Long id) {
-        if (couponsRepository.existsById(id)) {
-            couponsRepository.deleteById(id);
-            return true;
+    public Map<Boolean, String> deleteCoupon(Long id) {
+        Map<Boolean, String> map = new HashMap<>();
+        // Check if coupon exists
+        Optional<Coupons> optionalCoupon = couponsRepository.findById(id);
+        if (optionalCoupon.isEmpty()) {
+            map.put(false, "Coupon not found with id: " + id);
+            return map;
         }
-        return false;
+
+        // Check if coupon has been used
+        boolean isUsed = usedCouponRepository.existsByCouponId(id);
+        if (isUsed) {
+            map.put(false, "This code is already used, so you can't delete it.");
+            return map;
+        }
+
+        // Proceed with delete if not used
+        couponsRepository.deleteById(id);
+        map.put(true, "Coupon deleted successfully");
+        return map;
     }
+
+    @Override
+    public boolean softDelete(Long id) {
+        return couponsRepository.findById(id)
+                .map(coupon -> {
+                    coupon.setActive(false);
+                    coupon.setUpdatedAt(LocalDateTime.now());
+                    couponsRepository.save(coupon);
+                    return true;
+                })
+                .orElse(false);
+    }
+
 
     // --- Mapping Methods ---
     private CouponsResponseDTO mapToDTO(Coupons coupon) {
@@ -101,9 +161,9 @@ public class CouponsServiceImpl implements CouponsService {
 
     @Override
     public String applyCoupon(ApplyCouponRequest request) {
-        Optional<Coupons> optionalCoupon = couponsRepository.findByCouponCode(request.getCouponCode());
+        Optional<Coupons> optionalCoupon = couponsRepository.findById(request.getCouponId());
         if (optionalCoupon.isEmpty()) {
-            return "The coupon code '" + request.getCouponCode() + "' does not exist.";
+            return "The coupon Id '" + request.getCouponId() + "' does not exist.";
         }
 
         Coupons coupon = optionalCoupon.get();
@@ -116,7 +176,7 @@ public class CouponsServiceImpl implements CouponsService {
             return "This coupon has expired and can no longer be used.";
         }
 
-        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCoupon(request.getUserId(), coupon).isPresent();
+        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCouponId(request.getUserId(), coupon.getId()).isPresent();
         if (alreadyUsed) {
             return "You have already used this coupon. Each coupon can be used only once per user.";
         }
@@ -135,22 +195,43 @@ public class CouponsServiceImpl implements CouponsService {
     }
 
     @Override
-    public boolean checkValidCoupon(ApplyCouponRequest request) {
-        Optional<Coupons> optionalCoupon = couponsRepository.findByCouponCode(request.getCouponCode());
+    public Coupons checkValidCoupon(ValidCouponRequest request) {
+        // Fetch active coupon directly
+        Optional<Coupons> optionalCoupon = couponsRepository.findByCouponCodeAndActive(request.getCouponCode(), true);
+
         if (optionalCoupon.isEmpty()) {
-            return false;
+            return null; // No active coupon found
         }
+
         Coupons coupon = optionalCoupon.get();
-        if (!coupon.getActive()) {
-            return false;
+        LocalDateTime now = LocalDateTime.now();
+
+        // ✅ Check valid date range (startDate <= now <= endDate)
+        if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
+            return null; // Coupon not yet started or expired
         }
-        if (coupon.getEndDate().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCoupon(request.getUserId(), coupon).isPresent();
+
+        // ✅ Check if user already used this coupon
+        boolean alreadyUsed = usedCouponRepository
+                .findByUserIdAndCouponId(request.getUserId(), coupon.getId())
+                .isPresent();
+
         if (alreadyUsed) {
-            return false;
+            return null; // Already used by this user
         }
-        return true;
+
+        // ✅ Coupon is valid
+        return coupon;
     }
+
+
 }
+
+
+//sing up -> url pass karo chho F.D
+//url lo pwd + password
+//
+//zip -> ma decript +
+//amin zip ma password
+//
+//admin ma decript and password

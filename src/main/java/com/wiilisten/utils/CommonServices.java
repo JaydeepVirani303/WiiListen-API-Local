@@ -3,19 +3,12 @@ package com.wiilisten.utils;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.enums.CouponType;
+import com.wiilisten.repo.CouponsRepository;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,17 +27,6 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wiilisten.entity.AdministrativeNotification;
-import com.wiilisten.entity.BlockedUser;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.CommissionRate;
-import com.wiilisten.entity.EarningHistory;
-import com.wiilisten.entity.FavouriteListener;
-import com.wiilisten.entity.ListenerAvailability;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.OtpHistory;
-import com.wiilisten.entity.User;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.UserRoleEnum;
 import com.wiilisten.request.AvailabilityDTO;
@@ -65,6 +47,9 @@ public class CommonServices {
 
 	@Autowired
 	private ServiceRegistry serviceRegistry;
+
+	@Autowired
+	private CouponsRepository couponsRepository;
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CommonServices.class);
 
@@ -186,6 +171,14 @@ public class CommonServices {
 
 	}
 
+	public GenericResponse generateGenericSuccessResponse(String message) {
+
+		LOGGER.info(ApplicationConstants.CALLED_LABEL);
+		return new GenericResponse(ApplicationResponseConstants.SUCCESS_RESPONSE,
+				message);
+
+	}
+
 	/**
 	 * The <code>generateResponseForNoDataFound</code> is used to set Generic
 	 * Response for no data found.
@@ -195,6 +188,11 @@ public class CommonServices {
 	public GenericResponse generateResponseForNoDataFound() {
 		return new GenericResponse(ApplicationResponseConstants.NO_DATA_FOUND,
 				getMessageByCode(ErrorDataEnum.NO_DATA_FOUND.getCode()));
+	}
+
+	public GenericResponse generateGenericFailResponse(String message) {
+		return new GenericResponse(ApplicationResponseConstants.INVALID_REQUEST,
+				message);
 	}
 
 	/**
@@ -869,29 +867,73 @@ public class CommonServices {
 
 	public void saveEarning(BookedCalls bookedcall) {
 		CommissionRate commissionRate = serviceRegistry.getCommissionRateService().findOne(1L);
-		Double adminPercent = (bookedcall.getPayableAmount() * commissionRate.getRate()) / 100;
-		EarningHistory earningHistory = new EarningHistory();
-		earningHistory.setUser(bookedcall.getListener().getUser());
-		earningHistory.setAmount(bookedcall.getPayableAmount() - adminPercent);
-		earningHistory.setPaymentStatus(ApplicationConstants.DEPOSITED);
-		earningHistory.setReason(ApplicationConstants.CALL);
-		earningHistory.setActive(true);
-		serviceRegistry.getEarningHistoryService().saveORupdate(earningHistory);
+		//add here
+		Optional<Coupons> coupon = couponsRepository.findById(bookedcall.getCouponId());
+		if (coupon.isPresent()) {
+			Coupons optionalCoupon = coupon.get();
+			CouponType couponType = optionalCoupon.getCouponType();
+			double couponDiscount = 0;
+			double adminPercent = 0;
+			double totalAmount = 0;
+			if (couponType.equals(CouponType.FLAT)) {
+				adminPercent = (bookedcall.getPayableAmount() * commissionRate.getRate()) / 100;
+				couponDiscount = optionalCoupon.getCouponAmount();
+				totalAmount = adminPercent - couponDiscount;
+			} else if (couponType.equals(CouponType.PERCENTAGE)) {
+				couponDiscount = optionalCoupon.getCouponAmount();
+				double discount = ((bookedcall.getPayableAmount()) * couponDiscount) / 100;
+				adminPercent = (bookedcall.getPayableAmount() * commissionRate.getRate()) / 100;
+				totalAmount = adminPercent - discount;
+			}
 
-		// To find total calls
-		List<EarningHistory> earningHistories = serviceRegistry.getEarningHistoryService()
-				.findByActiveTrueAndUserOrderByCreatedAtDesc(bookedcall.getListener().getUser());
-		Long size = (long) earningHistories.size();
+			EarningHistory earningHistory = new EarningHistory();
+			earningHistory.setUser(bookedcall.getListener().getUser());
+			earningHistory.setAmount(bookedcall.getPayableAmount() - totalAmount);
+			earningHistory.setPaymentStatus(ApplicationConstants.DEPOSITED);
+			earningHistory.setReason(ApplicationConstants.CALL);
+			earningHistory.setActive(true);
+			serviceRegistry.getEarningHistoryService().saveORupdate(earningHistory);
 
-		ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService()
-				.findOne(bookedcall.getListener().getId());
-		listenerProfile
-				.setTotalEarning(listenerProfile.getTotalEarning() + bookedcall.getPayableAmount() - adminPercent);
-		listenerProfile.setTotalCompletedMinutes(
-				listenerProfile.getTotalCompletedMinutes() + bookedcall.getDurationInMinutes());
-		listenerProfile.setTotalAttendedCalls(size);
-		listenerProfile.setTotalCommission(listenerProfile.getTotalEarning() * (commissionRate.getRate() / 100));
-		serviceRegistry.getListenerProfileService().saveORupdate(listenerProfile);
+			// To find total calls
+			List<EarningHistory> earningHistories = serviceRegistry.getEarningHistoryService()
+					.findByActiveTrueAndUserOrderByCreatedAtDesc(bookedcall.getListener().getUser());
+			Long size = (long) earningHistories.size();
+
+			ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService()
+					.findOne(bookedcall.getListener().getId());
+			listenerProfile
+					.setTotalEarning(listenerProfile.getTotalEarning() + bookedcall.getPayableAmount() - totalAmount);
+			listenerProfile.setTotalCompletedMinutes(
+					listenerProfile.getTotalCompletedMinutes() + bookedcall.getDurationInMinutes());
+			listenerProfile.setTotalAttendedCalls(size);
+			listenerProfile.setTotalCommission(listenerProfile.getTotalEarning() * (commissionRate.getRate() / 100));
+			serviceRegistry.getListenerProfileService().saveORupdate(listenerProfile);
+		} else {
+
+			Double adminPercent = (bookedcall.getPayableAmount() * commissionRate.getRate()) / 100;
+			EarningHistory earningHistory = new EarningHistory();
+			earningHistory.setUser(bookedcall.getListener().getUser());
+			earningHistory.setAmount(bookedcall.getPayableAmount() - adminPercent);
+			earningHistory.setPaymentStatus(ApplicationConstants.DEPOSITED);
+			earningHistory.setReason(ApplicationConstants.CALL);
+			earningHistory.setActive(true);
+			serviceRegistry.getEarningHistoryService().saveORupdate(earningHistory);
+
+			// To find total calls
+			List<EarningHistory> earningHistories = serviceRegistry.getEarningHistoryService()
+					.findByActiveTrueAndUserOrderByCreatedAtDesc(bookedcall.getListener().getUser());
+			Long size = (long) earningHistories.size();
+
+			ListenerProfile listenerProfile = serviceRegistry.getListenerProfileService()
+					.findOne(bookedcall.getListener().getId());
+			listenerProfile
+					.setTotalEarning(listenerProfile.getTotalEarning() + bookedcall.getPayableAmount() - adminPercent);
+			listenerProfile.setTotalCompletedMinutes(
+					listenerProfile.getTotalCompletedMinutes() + bookedcall.getDurationInMinutes());
+			listenerProfile.setTotalAttendedCalls(size);
+			listenerProfile.setTotalCommission(listenerProfile.getTotalEarning() * (commissionRate.getRate() / 100));
+			serviceRegistry.getListenerProfileService().saveORupdate(listenerProfile);
+		}
 	}
 
 	public void sendProfileUpdatedNotification(User user)throws IOException {

@@ -167,9 +167,13 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 			case STEP_5:
 
-				listener.setIdProof(requestProfileDetails.getIdproof());
-//					TODO Add W9 form details
-				listener.setW9Form(requestProfileDetails.getW9Form());
+				if (requestProfileDetails.getIdproof() != null) {
+					listener.setIdProof(requestProfileDetails.getIdproof());
+				}
+
+				if (requestProfileDetails.getW9form() != null) {
+					listener.setW9Form(requestProfileDetails.getW9form());
+				}
 				listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_6.getValue());
 				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 				break;

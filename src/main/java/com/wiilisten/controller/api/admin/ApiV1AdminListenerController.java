@@ -97,6 +97,7 @@ public class ApiV1AdminListenerController extends BaseController {
 
 			response.setUserId(listener.getUser().getId());
 			response.setListnerId(listener.getId());
+			response.setW9sUrl(listener.getW9Form());
 			if (bankDetails != null) {
 				response.setBankDetailsId(bankDetails.getId());
 			}
