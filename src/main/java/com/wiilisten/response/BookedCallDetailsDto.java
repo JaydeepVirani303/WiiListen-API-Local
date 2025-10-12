@@ -113,5 +113,7 @@ public class BookedCallDetailsDto {
 
 	@JsonProperty("sponsored")
 	private Boolean sponsored;
-	
+
+	@JsonProperty("coupon_id")
+	private Long couponId;
 }

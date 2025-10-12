@@ -1,8 +1,11 @@
 package com.wiilisten.controller.api.admin;
 
+import com.wiilisten.controller.BaseController;
 import com.wiilisten.request.ApplyCouponRequest;
 import com.wiilisten.request.CouponsRequestDTO;
+import com.wiilisten.request.ValidCouponRequest;
 import com.wiilisten.response.CouponsResponseDTO;
+import com.wiilisten.response.ValidCouponResponse;
 import com.wiilisten.service.CouponsService;
 import com.wiilisten.utils.ApplicationURIConstants;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping(ApplicationURIConstants.API + ApplicationURIConstants.V1 + ApplicationURIConstants.ADMIN + ApplicationURIConstants.COUPON)
 @RequiredArgsConstructor
-public class ApiV1AdminCouponsController {
+public class ApiV1AdminCouponsController extends BaseController {
 
     private final CouponsService couponsService;
 
@@ -41,14 +44,27 @@ public class ApiV1AdminCouponsController {
     }
 
     // --- Get Coupon by Code ---
-    @GetMapping("/{code}")
-    public ResponseEntity<?> getCouponByCode(@PathVariable String code) {
-        CouponsResponseDTO coupon = couponsService.getCouponByCode(code);
+//    @GetMapping("/{code}")
+//    public ResponseEntity<?> getCouponByCode(@PathVariable String code) {
+//        CouponsResponseDTO coupon = couponsService.getCouponByCode(code);
+//        if (coupon == null) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//                    .body(Map.of(
+//                            "message", "Coupon not found",
+//                            "couponCode", code
+//                    ));
+//        }
+//        return ResponseEntity.ok(coupon);
+//    }
+
+    // --- Get Coupon by Id ---
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCouponById(@PathVariable Long id) {
+        CouponsResponseDTO coupon = couponsService.getCouponById(id);
         if (coupon == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of(
-                            "message", "Coupon not found",
-                            "couponCode", code
+                            "message", "Coupon not found"
                     ));
         }
         return ResponseEntity.ok(coupon);
@@ -66,10 +82,23 @@ public class ApiV1AdminCouponsController {
 
     // --- Delete Coupon ---
     @DeleteMapping(ApplicationURIConstants.DELETE + "/{id}")
-    public ResponseEntity<Map<String, String>> deleteCoupon(@PathVariable Long id) {
-        boolean deleted = couponsService.deleteCoupon(id);
+    public ResponseEntity<Object> deleteCoupon(@PathVariable Long id) {
+        Map<Boolean, String> result = couponsService.deleteCoupon(id);
+        boolean isSuccess = result.containsKey(true);
+        String message = isSuccess ? result.get(true) : result.get(false);
+        if (isSuccess) {
+            return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(message));
+        } else {
+            return ResponseEntity.ok(getCommonServices().generateGenericFailResponse(message));
+        }
+    }
+
+    // --- Delete Coupon ---
+    @DeleteMapping(ApplicationURIConstants.STATUS + "/{id}")
+    public ResponseEntity<Map<String, String>> softDelete(@PathVariable Long id) {
+        boolean deleted = couponsService.softDelete(id);
         if (deleted) {
-            return ResponseEntity.ok(Map.of("message", "Coupon deleted successfully"));
+            return ResponseEntity.ok(Map.of("message", "Coupon De-activated successfully"));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", "Coupon not found with id: " + id));
@@ -84,13 +113,14 @@ public class ApiV1AdminCouponsController {
     }
 
     // --- Validate Coupon ---
-    @PostMapping(ApplicationURIConstants.VERIFY)
-    public ResponseEntity<String> validateCoupon(@RequestBody ApplyCouponRequest request) {
-        boolean status = couponsService.checkValidCoupon(request);
-        if (status) {
-            return ResponseEntity.ok("Coupon is valid");
-        } else {
-            return ResponseEntity.ok("Coupon is not valid");
-        }
-    }
+//    @PostMapping(ApplicationURIConstants.VERIFY)
+//    public ResponseEntity<ValidCouponResponse> validateCoupon(@RequestBody ValidCouponRequest request) {
+//        ValidCouponResponse validCouponResponse = couponsService.checkValidCoupon(request);
+//        if (validCouponResponse.getCoupons()!=null) {
+//            validCouponResponse.setMessage("Coupon is valid");
+//        } else {
+//            validCouponResponse.setMessage("Coupon is Already used by you.");
+//        }
+//        return ResponseEntity.ok(validCouponResponse);
+//    }
 }
