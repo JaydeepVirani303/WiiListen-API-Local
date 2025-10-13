@@ -2,8 +2,10 @@ package com.wiilisten.controller.api.admin;
 
 import com.wiilisten.controller.BaseController;
 import com.wiilisten.entity.ListenerProfile;
+import com.wiilisten.request.PdfRequest;
 import com.wiilisten.service.impl.DownloadZipFileServiceImpl;
 import com.wiilisten.utils.ApplicationURIConstants;
+import com.wiilisten.utils.PdfEncryptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
 import java.net.URL;
@@ -36,6 +35,9 @@ public class ApiV1AdminReportDownloadController extends BaseController {
 
     @Autowired
     DownloadZipFileServiceImpl downloadZipFileService;
+
+    @Autowired
+    PdfEncryptionService pdfEncryptionService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiV1AdminReportDownloadController.class);
 
@@ -215,6 +217,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             fis.transferTo(baos);
             zipBytes = baos.toByteArray();
+            zipBytes = downloadZipFileService.applyPasswordToZipBytes(zipBytes, "1234");
         } catch (IOException e) {
             LOGGER.error("Failed to read temporary ZIP file into byte array: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -231,4 +234,9 @@ public class ApiV1AdminReportDownloadController extends BaseController {
                 .body(zipBytes);
     }
 
+    @PostMapping(ApplicationURIConstants.GET_PDF)
+    public ResponseEntity<byte[]> downloadPdfWithPassword(@RequestBody PdfRequest request
+    ) throws IOException {
+        return pdfEncryptionService.downloadPdfWithPassword(request.getFileUrl());
+    }
 }

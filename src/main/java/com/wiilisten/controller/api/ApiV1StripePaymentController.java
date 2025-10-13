@@ -134,7 +134,8 @@ public class ApiV1StripePaymentController extends BaseController {
 
 			if (couponType.equals(CouponType.FLAT)) {
 				couponDiscount = optionalCoupon.getCouponAmount();
-				amount = (long) (amount - couponDiscount);
+//				amount = (long) (amount - couponDiscount);
+				amount = (long) (amount - (couponDiscount * 100));
 			} else if (couponType.equals(CouponType.PERCENTAGE)) {
 				couponDiscount = optionalCoupon.getCouponAmount();
 				double discount = (amount * couponDiscount) / 100;

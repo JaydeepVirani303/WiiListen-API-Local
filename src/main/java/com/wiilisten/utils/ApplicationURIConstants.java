@@ -134,6 +134,7 @@ public class ApplicationURIConstants {
 	public static final String VIDEO = "/video";
 	public static final String COMPRESS = "/compress";
 	public static final String UPDATE_ORDER = "/update-order";
+    public static final String GET_PDF = "/get-pdf";
 
 	private ApplicationURIConstants() {
 
