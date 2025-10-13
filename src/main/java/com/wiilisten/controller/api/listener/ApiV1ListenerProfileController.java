@@ -1,5 +1,6 @@
 package com.wiilisten.controller.api.listener;
 
+import java.io.IOException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -11,9 +12,12 @@ import java.util.List;
 import java.util.Map;
 
 import com.wiilisten.request.*;
+import com.wiilisten.utils.PdfEncryptionService;
+import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -67,6 +71,9 @@ public class ApiV1ListenerProfileController extends BaseController {
 	
 	@Value("${stripe.SecretKey}")
 	private String StripeKey;
+
+    @Autowired
+    PdfEncryptionService pdfEncryptionService;
 
 	//	TODO
 	@PostMapping(ApplicationURIConstants.UPDATE)
@@ -167,13 +174,20 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 			case STEP_5:
 
+                //put logic here
+
 				if (requestProfileDetails.getIdproof() != null) {
 					listener.setIdProof(requestProfileDetails.getIdproof());
+                    pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getIdproof());
 				}
 
 				if (requestProfileDetails.getW9form() != null) {
 					listener.setW9Form(requestProfileDetails.getW9form());
+                    pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getW9form());
 				}
+
+
+                //---
 				listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_6.getValue());
 				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 				break;
@@ -282,9 +296,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
 
-		} catch (
-
-		Exception e) {
+        } catch (Exception e) {
 			e.printStackTrace();
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
@@ -913,6 +925,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
+
 }
 
 //PaymentMethodCreateParams paymentMethodParams = PaymentMethodCreateParams.builder()
