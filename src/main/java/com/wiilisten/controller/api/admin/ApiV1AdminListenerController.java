@@ -86,21 +86,21 @@ public class ApiV1AdminListenerController extends BaseController {
 				return ResponseEntity.ok(getCommonServices()
 						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
 			}
-			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-					.findByUserAndActiveTrue(listener.getUser());
+//			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
+//					.findByUserAndActiveTrue(listener.getUser());
 			ListenerResponseDto response = new ListenerResponseDto();
 			BeanUtils.copyProperties(listener, response);
 			BeanUtils.copyProperties(listener.getUser(), response);
-			if (bankDetails != null) {
-				BeanUtils.copyProperties(bankDetails, response);
-			}
+//			if (bankDetails != null) {
+//				BeanUtils.copyProperties(bankDetails, response);
+//			}
 
 			response.setUserId(listener.getUser().getId());
 			response.setListnerId(listener.getId());
 			response.setW9sUrl(listener.getW9Form());
-			if (bankDetails != null) {
-				response.setBankDetailsId(bankDetails.getId());
-			}
+//			if (bankDetails != null) {
+//				response.setBankDetailsId(bankDetails.getId());
+//			}
 
 			List<ListenerAvailability> listenerAvailabilities = getServiceRegistry().getListenerAvailabilityService()
 					.findByUserAndActiveTrue(listener.getUser());
@@ -330,15 +330,15 @@ public class ApiV1AdminListenerController extends BaseController {
 				return ResponseEntity.ok(getCommonServices()
 						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
 			}
-			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-					.findByUserAndActiveTrue(listener.getUser());
+//			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
+//					.findByUserAndActiveTrue(listener.getUser());
 			ListenerResponseDto response = new ListenerResponseDto();
 
-			if (bankDetails == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(getCommonServices()
-						.generateBadResponseWithMessageKey(ErrorDataEnum.BANK_DETAILS_NOT_EXIST.getCode()));
-			}
+//			if (bankDetails == null) {
+//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+//				return ResponseEntity.ok(getCommonServices()
+//						.generateBadResponseWithMessageKey(ErrorDataEnum.BANK_DETAILS_NOT_EXIST.getCode()));
+//			}
 
 			Double total = listener.getTotalEarning();
 			Double withdrawn = listener.getTotalPaidEarning();
@@ -347,11 +347,11 @@ public class ApiV1AdminListenerController extends BaseController {
 			response.setTotalEarning(totalEarnings);
 
 			Map<String, String> account = new HashMap<>();
-			account.put("account_number", bankDetails.getAccountNumber());
-			account.put("routing_number", bankDetails.getRoutingOrAbaNumber());
-			account.put("account_holder_name", listener.getUserName());
-			account.put("account_holder_type", bankDetails.getAccountType());
-			account.put("currency", "usd");
+//			account.put("account_number", bankDetails.getAccountNumber());
+//			account.put("routing_number", bankDetails.getRoutingOrAbaNumber());
+//			account.put("account_holder_name", listener.getUserName());
+//			account.put("account_holder_type", bankDetails.getAccountType());
+//			account.put("currency", "usd");
 
 			Map<String, Object> accountdetail = getServiceRegistry().getPaymentService()
 					.createConnectedAccount(account);
