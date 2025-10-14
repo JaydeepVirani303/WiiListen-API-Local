@@ -1,6 +1,7 @@
 package com.wiilisten.controller.api.admin;
 
 import com.wiilisten.controller.BaseController;
+import com.wiilisten.entity.DownloadZipRequest;
 import com.wiilisten.entity.ListenerProfile;
 import com.wiilisten.request.PdfRequest;
 import com.wiilisten.service.impl.DownloadZipFileServiceImpl;
@@ -145,10 +146,10 @@ public class ApiV1AdminReportDownloadController extends BaseController {
         }
     }
 
-    @GetMapping(ApplicationURIConstants.DOWNLOAD_ZIP)
+    @PostMapping(ApplicationURIConstants.DOWNLOAD_ZIP)
     public ResponseEntity<byte[]> downloadZipFile(
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate, @RequestBody DownloadZipRequest downloadZipRequest) {
 
         LOGGER.info("Received request to download ZIP for listener profiles between {} and {}", startDate, endDate);
 
@@ -217,7 +218,7 @@ public class ApiV1AdminReportDownloadController extends BaseController {
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             fis.transferTo(baos);
             zipBytes = baos.toByteArray();
-            zipBytes = downloadZipFileService.applyPasswordToZipBytes(zipBytes, "1234");
+            zipBytes = downloadZipFileService.applyPasswordToZipBytes(zipBytes, downloadZipRequest.getPassword());
         } catch (IOException e) {
             LOGGER.error("Failed to read temporary ZIP file into byte array: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

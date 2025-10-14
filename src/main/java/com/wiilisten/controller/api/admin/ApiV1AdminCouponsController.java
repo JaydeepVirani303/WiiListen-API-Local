@@ -111,16 +111,4 @@ public class ApiV1AdminCouponsController extends BaseController {
         String message = couponsService.applyCoupon(request);
         return ResponseEntity.ok(message);
     }
-
-    // --- Validate Coupon ---
-//    @PostMapping(ApplicationURIConstants.VERIFY)
-//    public ResponseEntity<ValidCouponResponse> validateCoupon(@RequestBody ValidCouponRequest request) {
-//        ValidCouponResponse validCouponResponse = couponsService.checkValidCoupon(request);
-//        if (validCouponResponse.getCoupons()!=null) {
-//            validCouponResponse.setMessage("Coupon is valid");
-//        } else {
-//            validCouponResponse.setMessage("Coupon is Already used by you.");
-//        }
-//        return ResponseEntity.ok(validCouponResponse);
-//    }
 }

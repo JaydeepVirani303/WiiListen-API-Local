@@ -674,7 +674,7 @@ public class CommonServices {
 			dto.setCallRequestStatus(call.getCallRequestStatus());
 			dto.setDurationInMinutes(call.getDurationInMinutes());
 			dto.setMaxDuration(call.getListener().getCallMaxDuration());
-			dto.setPrice(call.getPayableAmount());
+			dto.setPrice(call.getPayableAmount() / 100);
 			dto.setRatePerMinute(call.getListener().getRatePerMinute());
 			dto.setListenerId(call.getListener().getId());
 			dto.setUserName(call.getListener().getUserName());
@@ -749,7 +749,7 @@ public class CommonServices {
 			dto.setCallerUserId(call.getCaller().getUser().getId());
 			dto.setListenerUserId(call.getListener().getUser().getId());
 			dto.setMaxDuration(call.getListener().getCallMaxDuration());
-			dto.setPrice(call.getPrice());
+			dto.setPrice(call.getPrice() / 100);
 			dto.setRatePerMinute(call.getListener().getRatePerMinute());
 			dto.setListenerId(call.getListener().getId());
 			dto.setUserName(call.getListener().getUserName());

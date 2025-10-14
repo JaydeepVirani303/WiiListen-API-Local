@@ -68,31 +68,6 @@ public class ApiV1CommonController extends BaseController {
 
 	}
 
-
-//	@PostMapping(ApplicationURIConstants.COUPON + ApplicationURIConstants.VERIFY)
-//	public ResponseEntity<Object> appliedCoupon(@RequestBody IdStatusRequestDto idStatusRequestDto) {
-//
-//		LOGGER.info(ApplicationConstants.ENTER_LABEL);
-//
-//		try {
-//			Coupon coupon = getServiceRegistry().getCouponService()
-//					.findByCodeAndActiveTrue(idStatusRequestDto.getType());
-//			if (coupon == null) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_COUPON_CODE.getCode()));
-//			}
-//			CouponResponseDto response = new CouponResponseDto();
-//			LOGGER.info("amount is {}" + coupon.getAmount());
-//			response.setAmount(coupon.getAmount());
-//
-//			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
-//		} catch (Exception e) {
-//			LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-//		}
-//	}
-
 	@PostMapping(ApplicationURIConstants.COUPON + ApplicationURIConstants.VERIFY)
 	public ResponseEntity<Object> validateCoupon(@RequestBody ValidCouponRequest request) {
 		Coupons coupons = couponsService.checkValidCoupon(request);
