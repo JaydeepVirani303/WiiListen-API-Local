@@ -541,11 +541,11 @@ public class ApiV1AuthenticationController extends BaseController {
 				if (dutyDetailsList != null)
 					response.setAvailability(dutyDetailsList);
 
-				ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-						.findByUserAndActiveTrue(user);
-				if (bankDetails != null) {
-					BeanUtils.copyProperties(bankDetails, response);
-				}
+//				ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
+//						.findByUserAndActiveTrue(user);
+//				if (bankDetails != null) {
+//					BeanUtils.copyProperties(bankDetails, response);
+//				}
 			}
 			if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 				CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
@@ -660,11 +660,11 @@ public class ApiV1AuthenticationController extends BaseController {
 					response.setAvailability(dutyDetailsList);
 				}
 
-				ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-						.findByUserAndActiveTrue(user);
-				if (bankDetails != null) {
-					BeanUtils.copyProperties(bankDetails, response);
-				}
+//				ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
+//						.findByUserAndActiveTrue(user);
+//				if (bankDetails != null) {
+//					BeanUtils.copyProperties(bankDetails, response);
+//				}
 			}
 			if (user.getRole().equals(UserRoleEnum.CALLER.getRole())) {
 				CallerProfile caller = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);

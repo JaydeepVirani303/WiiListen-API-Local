@@ -721,13 +721,13 @@ public class ApiV1ListenerProfileController extends BaseController {
 				user.setStripeCustomerId(customer.getId());
 				getServiceRegistry().getUserService().saveORupdate(user);
 			}
-			
-			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-					.findByUserAndActiveTrue(user);
-			if (bankDetails == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
-			}
+
+//			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
+//					.findByUserAndActiveTrue(user);
+//			if (bankDetails == null) {
+//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+//				return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
+//			}
 //			Customer customer=Customer.retrieve(user.getStripeCustomerId());
 			
 //			PaymentMethodCreateParams paymentMethodParams = PaymentMethodCreateParams.builder()
@@ -882,8 +882,9 @@ public class ApiV1ListenerProfileController extends BaseController {
 			LOGGER.info("customer 3 {}"+customer);
 //			 customer = Customer.retrieve(customer.getId(), retrieveParam, null);
 			 LOGGER.info("cutomer sources2 {}"+customer.getSources());
+			BankAccount bankAccount = null;
 			if (customer.getSources() != null) {
-			    BankAccount bankAccount = (BankAccount) customer.getSources().retrieve(token.getBankAccount().getId());
+				bankAccount = (BankAccount) customer.getSources().retrieve(token.getBankAccount().getId());
 			    Map<String, Object> params = new HashMap<>();
 			    params.put("amounts", amounts);
 
@@ -900,17 +901,17 @@ public class ApiV1ListenerProfileController extends BaseController {
 //			LOGGER.info("accounti di{}"+account.getId());
 //			account.getExternalAccounts().create(externalAccountParams);
 
-			bankDetails.setAccountNumber(requestProfileDetails.getAccountNumber());
-			bankDetails.setAccountType(requestProfileDetails.getAccountType());
-			bankDetails.setFullName(requestProfileDetails.getAccountName());
-			bankDetails.setRoutingOrAbaNumber(requestProfileDetails.getAbaNumber());
-			getServiceRegistry().getListenerBankDetailsService().saveORupdate(bankDetails);
-
+//			bankDetails.setAccountNumber(requestProfileDetails.getAccountNumber());
+//			bankDetails.setAccountType(requestProfileDetails.getAccountType());
+//			bankDetails.setFullName(requestProfileDetails.getAccountName());
+//			bankDetails.setRoutingOrAbaNumber(requestProfileDetails.getAbaNumber());
+//			getServiceRegistry().getListenerBankDetailsService().saveORupdate(bankDetails);
+//
 			UserProfileDto response = new UserProfileDto();
-			response.setAccountNumber(bankDetails.getAccountNumber());
-			response.setAccountType(bankDetails.getAccountType());
-			response.setFullName(bankDetails.getFullName());
-			response.setRoutingOrAbaNumber(bankDetails.getRoutingOrAbaNumber());
+//			response.setAccountNumber(requestProfileDetails.getAccountNumber());
+//			response.setAccountType(requestProfileDetails.getAccountType());
+//			response.setFullName(bankAccount != null ? bankAccount.getAccountHolderName() : null);
+//			response.setRoutingOrAbaNumber(bankAccount != null ? bankAccount.getRoutingNumber() : null);
 
 			if (user.getIsProfileSet()) {
 				getCommonServices().sendProfileUpdatedNotification(user);
