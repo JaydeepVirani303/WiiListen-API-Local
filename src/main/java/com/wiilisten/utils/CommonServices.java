@@ -190,6 +190,12 @@ public class CommonServices {
 				getMessageByCode(ErrorDataEnum.NO_DATA_FOUND.getCode()));
 	}
 
+
+	public GenericResponse generateResponseForNoDataFound(String message) {
+		return new GenericResponse(ApplicationResponseConstants.NO_DATA_FOUND,
+				message);
+	}
+
 	public GenericResponse generateGenericFailResponse(String message) {
 		return new GenericResponse(ApplicationResponseConstants.INVALID_REQUEST,
 				message);

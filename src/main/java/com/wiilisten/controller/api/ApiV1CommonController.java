@@ -7,6 +7,7 @@ import com.wiilisten.entity.*;
 import com.wiilisten.request.*;
 import com.wiilisten.response.*;
 import com.wiilisten.service.CouponsService;
+import com.wiilisten.utils.ApplicationResponseConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -74,7 +75,7 @@ public class ApiV1CommonController extends BaseController {
 		if (coupons != null) {
 			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(coupons));
 		} else {
-			return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
+			return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound("Invalid or expired coupon code. Please check the code and try again."));
 		}
 	}
 
