@@ -176,10 +176,10 @@ public class CouponsServiceImpl implements CouponsService {
             return "This coupon has expired and can no longer be used.";
         }
 
-//        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCouponId(request.getUserId(), coupon.getId()).isPresent();
-//        if (alreadyUsed) {
-//            return "You have already used this coupon. Each coupon can be used only once per user.";
-//        }
+        boolean alreadyUsed = usedCouponRepository.findByUserIdAndCouponId(request.getUserId(), coupon.getId()).isPresent();
+        if (alreadyUsed) {
+            return "You have already used this coupon. Each coupon can be used only once per user.";
+        }
 
         UsedCoupon usedCoupon = UsedCoupon.builder()
                 .userId(request.getUserId())
@@ -212,13 +212,13 @@ public class CouponsServiceImpl implements CouponsService {
         }
 
         // ✅ Check if user already used this coupon
-//        boolean alreadyUsed = usedCouponRepository
-//                .findByUserIdAndCouponId(request.getUserId(), coupon.getId())
-//                .isPresent();
-//
-//        if (alreadyUsed) {
-//            return null; // Already used by this user
-//        }
+        boolean alreadyUsed = usedCouponRepository
+                .findByUserIdAndCouponId(request.getUserId(), coupon.getId())
+                .isPresent();
+
+        if (alreadyUsed) {
+            return null; // Already used by this user
+        }
 
         // ✅ Coupon is valid
         return coupon;
