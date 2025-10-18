@@ -27,6 +27,8 @@ public interface CouponsService {
 
     String applyCoupon(ApplyCouponRequest request);
 
+    boolean isUsedCoupons(Long userId, Long couponId);
+
     Coupons checkValidCoupon(ValidCouponRequest request);
 
     CouponsResponseDTO getCouponById(Long id);

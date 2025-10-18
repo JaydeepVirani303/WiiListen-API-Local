@@ -64,9 +64,14 @@ public class ApiV1StripePaymentController extends BaseController {
 	public ResponseEntity<Object> createPaymentIntent(@RequestBody BookedCallDetailsDto bookedCallDetailsDto)
 			throws Exception {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+		BookedCalls bookedCall = new BookedCalls();
 		User user = null;
 		Double finalamount = 0D;
+		double subTotal = 0;
+		double discount = 0;
+		double tax = 0;
 		ListenerProfile listener = null;
+		double amount = 0;
 
 		user = getLoggedInUser();
 
@@ -88,21 +93,26 @@ public class ApiV1StripePaymentController extends BaseController {
 			return ResponseEntity.ok(
 					getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_FOUND.getCode()));
 		}
-		double subTotal;
+
 		if (bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.QUICK_CALL)
 				|| (bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.ON_DEMAND))) {
-//			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration());
-			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration()) * listener.getRatePerMinute();
+			subTotal = 1.2D * Double.parseDouble(listener.getCallMaxDuration());
 		} else {
 			subTotal = listener.getRatePerMinute() * bookedCallDetailsDto.getDurationInMinutes();
 		}
+		CommissionRate commissionRate = getServiceRegistry().getCommissionRateService().findFirstByOrderByIdAsc();
 		finalamount = subTotal;
-		if (bookedCallDetailsDto.getTaxValue() != null) {
-			finalamount = finalamount + bookedCallDetailsDto.getTaxValue();
+		if (commissionRate != null) {
+			tax = finalamount * (commissionRate.getRate() / 100);
+			tax = Double.parseDouble(String.format("%.2f", tax));
+			if ((subTotal - tax) >= 0) {
+				subTotal = subTotal - tax;
+			}
+
 		}
-		if (bookedCallDetailsDto.getDiscountValue() != null) {
-			finalamount = finalamount - bookedCallDetailsDto.getDiscountValue();
-		}
+//		if (bookedCallDetailsDto.getDiscountValue() != null) {
+//			finalamount = finalamount - bookedCallDetailsDto.getDiscountValue();
+//		}
 
 		finalamount = Math.round(finalamount * 100.0) / 100.0;
 
@@ -125,21 +135,28 @@ public class ApiV1StripePaymentController extends BaseController {
 		if (couponId != null) {
 			exists = couponsRepository.findById(couponId).isPresent();
 		}
-		long amount = finalamount.longValue();
-
-		if (exists) {
+		boolean isUsedCoupon = couponsService.isUsedCoupons(user.getId(), bookedCallDetailsDto.getCouponId());
+		amount = finalamount;
+		if (exists && !isUsedCoupon) {
 			Coupons optionalCoupon = couponsRepository.findById(couponId).get();
 			CouponType couponType = optionalCoupon.getCouponType();
-			double couponDiscount = 0;
-
 			if (couponType.equals(CouponType.FLAT)) {
-				couponDiscount = optionalCoupon.getCouponAmount();
-//				amount = (long) (amount - couponDiscount);
-				amount = (long) (amount - (couponDiscount * 100));
+				discount = optionalCoupon.getCouponAmount();
+				bookedCall.setDiscountValue(discount);
+				if ((tax - discount) >= 0) {
+					tax = tax - discount;
+				}
 			} else if (couponType.equals(CouponType.PERCENTAGE)) {
-				couponDiscount = optionalCoupon.getCouponAmount();
-				double discount = (amount * couponDiscount) / 100;
-				amount = (long) (amount - discount);
+				double couponDiscount = optionalCoupon.getCouponAmount();
+				discount = (finalamount * couponDiscount) / 100;
+				if ((tax - discount) >= 0) {
+					tax = tax - discount;
+				}
+				bookedCall.setDiscountValue(discount);
+			}
+			bookedCall.setAppliedDiscountCode(optionalCoupon.getCouponCode());
+			if ((finalamount - discount) >= 0) {
+				amount = finalamount - discount;
 			}
 			intent = getServiceRegistry().getPaymentService().createPaymentIntenet(amount,
 					user.getStripeCustomerId());
@@ -151,7 +168,9 @@ public class ApiV1StripePaymentController extends BaseController {
 					user.getStripeCustomerId());
 		}
 
-
+		bookedCall.setTaxValue(tax);
+		bookedCall.setSubTotal(subTotal);
+		bookedCall.setPayableAmount(amount);
 
 		// paymentIntent create and hold
 
@@ -162,7 +181,7 @@ public class ApiV1StripePaymentController extends BaseController {
 		if (!bookedCallDetailsDto.getCallType().equalsIgnoreCase(ApplicationConstants.SCHEDULED)) {
 			CallerProfile callerProfile = getServiceRegistry().getCallerProfileService().findByUserAndActiveTrue(user);
 
-			BookedCalls bookedCall = new BookedCalls();
+
 			bookedCall.setCouponId(bookedCallDetailsDto.getCouponId());
 			bookedCall.setCaller(callerProfile);
 			bookedCall.setListener(listener);
@@ -200,7 +219,7 @@ public class ApiV1StripePaymentController extends BaseController {
 		paymentIntenetResponseDto.setPaymentSuccess(false);
 		paymentIntenetResponseDto.setListenerId(listener.getId());
 		paymentIntenetResponseDto.setCallMaxDuration(listener.getCallMaxDuration());
-		paymentIntenetResponseDto.setFinalAmount((double) amount);
+		paymentIntenetResponseDto.setFinalAmount(amount);
 
 		LOGGER.info(ApplicationConstants.EXIT_LABEL);
 		return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(paymentIntenetResponseDto));

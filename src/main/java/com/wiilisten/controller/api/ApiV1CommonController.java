@@ -14,6 +14,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -75,7 +77,9 @@ public class ApiV1CommonController extends BaseController {
 		if (coupons != null) {
 			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(coupons));
 		} else {
-			return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound("Invalid or expired coupon code. Please check the code and try again."));
+			return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound(
+					"Invalid or expired coupon code. Please check the code and try again."
+			));
 		}
 	}
 

@@ -192,7 +192,7 @@ public class CommonServices {
 
 
 	public GenericResponse generateResponseForNoDataFound(String message) {
-		return new GenericResponse(ApplicationResponseConstants.NO_DATA_FOUND,
+		return new GenericResponse(ApplicationResponseConstants.INVALID_REQUEST,
 				message);
 	}
 
@@ -680,7 +680,7 @@ public class CommonServices {
 			dto.setCallRequestStatus(call.getCallRequestStatus());
 			dto.setDurationInMinutes(call.getDurationInMinutes());
 			dto.setMaxDuration(call.getListener().getCallMaxDuration());
-			dto.setPrice(call.getPayableAmount() / 100);
+			dto.setPrice(call.getPayableAmount() != null ? call.getPayableAmount() / 100 : 0.0);
 			dto.setRatePerMinute(call.getListener().getRatePerMinute());
 			dto.setListenerId(call.getListener().getId());
 			dto.setUserName(call.getListener().getUserName());
@@ -755,7 +755,7 @@ public class CommonServices {
 			dto.setCallerUserId(call.getCaller().getUser().getId());
 			dto.setListenerUserId(call.getListener().getUser().getId());
 			dto.setMaxDuration(call.getListener().getCallMaxDuration());
-			dto.setPrice(call.getPrice() / 100);
+			dto.setPrice(call.getPrice() != null ? call.getPrice() / 100 : 0.0);
 			dto.setRatePerMinute(call.getListener().getRatePerMinute());
 			dto.setListenerId(call.getListener().getId());
 			dto.setUserName(call.getListener().getUserName());
@@ -873,8 +873,11 @@ public class CommonServices {
 
 	public void saveEarning(BookedCalls bookedcall) {
 		CommissionRate commissionRate = serviceRegistry.getCommissionRateService().findOne(1L);
+		Optional<Coupons> coupon = Optional.empty();
 		//add here
-		Optional<Coupons> coupon = couponsRepository.findById(bookedcall.getCouponId());
+		if (bookedcall.getCouponId() != null) {
+			coupon = couponsRepository.findById(bookedcall.getCouponId());
+		}
 		if (coupon.isPresent()) {
 			Coupons optionalCoupon = coupon.get();
 			CouponType couponType = optionalCoupon.getCouponType();
