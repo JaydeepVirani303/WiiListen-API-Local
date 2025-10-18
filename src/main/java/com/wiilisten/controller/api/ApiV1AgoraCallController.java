@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.response.*;
+import com.wiilisten.service.CouponsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -21,14 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stripe.model.PaymentIntent;
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.Coupon;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.NotificationHistory;
-import com.wiilisten.entity.User;
-import com.wiilisten.entity.UserNotes;
-import com.wiilisten.entity.UserRatingAndReview;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.enums.UserRoleEnum;
@@ -38,10 +33,6 @@ import com.wiilisten.request.IdStatusRequestDto;
 import com.wiilisten.request.JoinCallDto;
 import com.wiilisten.request.QuickCallRequestDto;
 import com.wiilisten.request.StartCallRequestDto;
-import com.wiilisten.response.BookedCallDetailsDto;
-import com.wiilisten.response.CallStartResponseDto;
-import com.wiilisten.response.EndCallResponseDto;
-import com.wiilisten.response.ReviewsAndRatingsResponseDto;
 import com.wiilisten.service.PaymentService;
 import com.wiilisten.utils.ApplicationConstants;
 import com.wiilisten.utils.ApplicationURIConstants;
@@ -54,6 +45,9 @@ public class ApiV1AgoraCallController extends BaseController {
 
 	@Autowired
 	private FCMService fcmService;
+
+	@Autowired
+	CouponsService couponsService;
 
 	@Autowired
 	private PaymentService paymentService;
@@ -609,7 +603,7 @@ public class ApiV1AgoraCallController extends BaseController {
 				duration++;
 			}
 			if (duration < 1) {
-				duration = 1D;
+				duration = 0D;
 			}
 			LOGGER.info("inside value");
 			System.err.println("inside value");
@@ -622,14 +616,28 @@ public class ApiV1AgoraCallController extends BaseController {
 
 			LOGGER.info("value is {}" + duration);
 			System.err.println("value is {}" + duration);
-			Double finalamount = subTotal;
+			double finalamount = subTotal;
 			LOGGER.info("finalamount is {}" + finalamount);
 			System.err.println("finalamount is {}" + finalamount);
-			if (bookedcall.getTaxValue() != null) {
-				finalamount = finalamount + bookedcall.getTaxValue();
+			CommissionRate commissionRate = getServiceRegistry().getCommissionRateService().findFirstByOrderByIdAsc();
+			double tax = 0;
+			if (commissionRate != null) {
+				tax = finalamount * (commissionRate.getRate() / 100);
+				tax = Double.parseDouble(String.format("%.2f", tax));
+				if ((subTotal - tax) >= 0) {
+					subTotal = subTotal - tax;
+				}
 			}
+//			if (bookedcall.getTaxValue() != null) {
+//				finalamount = finalamount + bookedcall.getTaxValue();
+//			}
 			if (bookedcall.getDiscountValue() != null) {
-				finalamount = finalamount - bookedcall.getDiscountValue();
+				if ((finalamount - bookedcall.getDiscountValue()) >= 0) {
+					finalamount = finalamount - bookedcall.getDiscountValue();
+				}
+				if ((tax - bookedcall.getDiscountValue()) >= 0) {
+					tax = tax - bookedcall.getDiscountValue();
+				}
 			}
 
 			finalamount = Math.round(finalamount * 100.0) / 100.0;
@@ -638,17 +646,23 @@ public class ApiV1AgoraCallController extends BaseController {
 			System.err.println("final amount before " + finalamount);
 			// if (endCallRequestDto.getCallType().equals(ApplicationConstants.SCHEDULED)) {
 
-			Long amount = finalamount.longValue() * 100;
-			if (amount < 100) {
-				LOGGER.info("inside condition is");
-				System.err.println("inside condition is");
-				amount = 100L;
-			}
-			LOGGER.info("amount is {}" + amount);
-			System.err.println("amount is {}" + amount);
+//			Long amount = finalamount.longValue() * 100;
+//			if (amount < 100) {
+//				LOGGER.info("inside condition is");
+//				System.err.println("inside condition is");
+//				amount = 100L;
+//			}
+//			LOGGER.info("amount is {}" + amount);
+//			System.err.println("amount is {}" + amount);
 			LOGGER.info("bookedcall.getPaymentIntent() {}" + bookedcall.getPaymentIntent());
 			System.err.println("bookedcall.getPaymentIntent() {}" + bookedcall.getPaymentIntent());
-			PaymentIntent charge = paymentService.capturePaymentIntent(bookedcall.getPaymentIntent(), amount);
+			PaymentIntent charge = paymentService.capturePaymentIntent(bookedcall.getPaymentIntent(), finalamount);
+			if (bookedcall.getCouponId() != null) {
+				CouponsResponseDTO coupon = couponsService.getCouponById(bookedcall.getCouponId());
+				if (coupon != null) {
+					bookedcall.setAppliedDiscountCode(coupon.getCouponCode());
+				}
+			}
 
 			System.err.println("capture amount :------ " + charge);
 			bookedcall.setPaymentlog((charge.toJson()).toString());
@@ -660,6 +674,8 @@ public class ApiV1AgoraCallController extends BaseController {
 			bookedcall.setListenerLeavedAt(LocalDateTime.now());
 			bookedcall.setDurationInMinutes(duration.longValue());
 			bookedcall.setSubTotal(subTotal);
+			bookedcall.setTaxValue(tax);
+			bookedcall.setDiscountValue(bookedcall.getDiscountValue());
 			bookedcall.setPayableAmount(finalamount);
 
 			getCommonServices().saveEarning(bookedcall);
@@ -739,15 +755,57 @@ public class ApiV1AgoraCallController extends BaseController {
 
 		try {
 			BookedCalls bookedCalls = getServiceRegistry().getBookedCallsService().findOne(idRequestDto.getId());
-
 			EndCallResponseDto response = getResponseForEndCall(bookedCalls);
-			response.setId(bookedCalls.getId());
+			CouponsResponseDTO couponsResponseDTO = couponsService.getCouponById(bookedCalls.getCouponId());
+			if (couponsResponseDTO != null) {
+				response.setAppliedDiscountCode(couponsResponseDTO.getCouponCode());
+			}
+			Optional.ofNullable(bookedCalls.getId()).ifPresent(response::setId);
+			Optional.ofNullable(bookedCalls.getPayableAmount()).ifPresent(response::setPayableAmount);
+			Optional.ofNullable(bookedCalls.getSubTotal()).ifPresent(response::setSubTotal);
+			Optional.ofNullable(bookedCalls.getTaxValue()).ifPresent(response::setTaxValue);
+			Optional.ofNullable(bookedCalls.getAppliedDiscountCode()).ifPresent(response::setAppliedDiscountCode);
+
 			if (bookedCalls.getType().equals(ApplicationConstants.ON_DEMAND)
 					|| bookedCalls.getType().equals(ApplicationConstants.QUICK_CALL)) {
 				response.setRatePerMinute(1.2D);
 			} else {
 				response.setRatePerMinute(bookedCalls.getListener().getRatePerMinute());
 			}
+			if (bookedCalls.getListener() != null && bookedCalls.getListener().getUser() != null) {
+
+				List<UserRatingAndReview> reviewAndRatings = getServiceRegistry()
+						.getUserRatingAndReviewService()
+						.findByReviewedUserAndActiveTrueOrderByCreatedAtDesc(bookedCalls.getListener().getUser());
+
+				List<ReviewsAndRatingsResponseDto> reviewsAndRatingsResponseDto = new ArrayList<>();
+
+				for (UserRatingAndReview userRatingAndReview : reviewAndRatings) {
+					ReviewsAndRatingsResponseDto dto = new ReviewsAndRatingsResponseDto();
+					dto.setId(userRatingAndReview.getId());
+
+					if (userRatingAndReview.getReviewerUser() != null) {
+						dto.setReviewerId(userRatingAndReview.getReviewerUser().getId());
+						dto.setReviewerName(userRatingAndReview.getReviewerUser().getCallName());
+						dto.setEmail(userRatingAndReview.getReviewerUser().getEmail());
+						dto.setContact(userRatingAndReview.getReviewerUser().getContactNumber());
+						dto.setProfile(userRatingAndReview.getReviewerUser().getProfilePicture());
+					}
+
+					dto.setRating(userRatingAndReview.getRating());
+					dto.setReview(userRatingAndReview.getReview());
+					dto.setActive(userRatingAndReview.getActive());
+					dto.setCreatedAt(userRatingAndReview.getCreatedAt());
+					dto.setUpdatedAt(userRatingAndReview.getUpdatedAt());
+
+					reviewsAndRatingsResponseDto.add(dto);
+				}
+
+				response.setReviewsAndRatings(reviewsAndRatingsResponseDto);
+			}
+
+
+
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);
 			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));

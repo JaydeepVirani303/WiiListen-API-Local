@@ -1,23 +1,18 @@
 package com.wiilisten.service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Service;
 
 import com.stripe.model.Account;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
-import com.stripe.model.AccountCollection;
-import com.stripe.model.BankAccount;
 import com.stripe.model.Customer;
 import com.stripe.model.EphemeralKey;
 import com.stripe.model.ExternalAccountCollection;
 import com.stripe.model.PaymentIntent;
-import com.stripe.model.PaymentSource;
 import com.stripe.model.Payout;
 import com.stripe.model.Token;
 import com.stripe.model.Transfer;
@@ -29,8 +24,6 @@ import com.stripe.param.PaymentIntentCaptureParams;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PayoutCreateParams;
 import com.stripe.param.TransferCreateParams;
-import com.wiilisten.entity.ListenerBankDetails;
-import com.wiilisten.entity.ListenerProfile;
 import com.wiilisten.entity.User;
 
 @Service
@@ -83,10 +76,19 @@ public class PaymentService {
 
 	}
 
-	public PaymentIntent createPaymentIntenet(Long finalAmount, String customerId) {
+	public PaymentIntent createPaymentIntenet(double finalAmount, String customerId) {
+		// Minimum allowed amount in cents (Stripe requires at least $0.50 = 50 cents)
+		long MIN_AMOUNT = 50;
+
+		long amountInCents = Math.round(finalAmount * 100);
+		// Check and set default if below minimum
+		if (amountInCents < MIN_AMOUNT) {
+//			System.out.println("Amount too small. Setting default minimum amount of $0.50 USD.");
+			amountInCents = MIN_AMOUNT;
+		}
 		Stripe.apiKey = StripeKey;
 		PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
-				.setAmount(finalAmount)
+				.setAmount(amountInCents)
 				.setCurrency("usd")
 				.setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL)
 				.addPaymentMethodType("card")
@@ -147,12 +149,19 @@ public class PaymentService {
 		return null;
 	}
 
-	public PaymentIntent capturePaymentIntent(String paymentIntentId, Long amount) throws StripeException {
+	public PaymentIntent capturePaymentIntent(String paymentIntentId, double amount) throws StripeException {
 		Stripe.apiKey = StripeKey;
+		amount = amount * 100;
+		// Minimum allowed amount in cents (Stripe requires at least $0.50 = 50 cents)
+		long MIN_AMOUNT = 50;
 
+		// Check and set default if below minimum
+		if (amount < MIN_AMOUNT) {
+			amount = MIN_AMOUNT;
+		}
 		PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
 
-		PaymentIntentCaptureParams params = PaymentIntentCaptureParams.builder().setAmountToCapture(amount).build();
+		PaymentIntentCaptureParams params = PaymentIntentCaptureParams.builder().setAmountToCapture((long) amount).build();
 
 		try {
 			PaymentIntent capturedPaymentIntent = paymentIntent.capture(params);

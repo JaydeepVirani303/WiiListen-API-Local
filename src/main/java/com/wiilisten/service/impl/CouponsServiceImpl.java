@@ -147,16 +147,16 @@ public class CouponsServiceImpl implements CouponsService {
     }
 
     private Coupons mapToEntity(CouponsRequestDTO dto) {
-        return Coupons.builder()
-                .couponCode(dto.getCouponCode())
-                .startDate(dto.getStartDate())
-                .endDate(dto.getEndDate())
-                .couponType(dto.getCouponType())
-                .couponAmount(dto.getCouponAmount())
-                .active(dto.getActive())
-                .createdAt(dto.getCreatedAt())
-                .updatedAt(dto.getUpdatedAt())
-                .build();
+        Coupons coupons = new Coupons();
+        coupons.setCouponCode(dto.getCouponCode());
+        coupons.setStartDate(dto.getStartDate());
+        coupons.setEndDate(dto.getEndDate());
+        coupons.setCouponType(dto.getCouponType());
+        coupons.setCouponAmount(dto.getCouponAmount());
+        coupons.setActive(dto.getActive());
+        coupons.setCreatedAt(dto.getCreatedAt());
+        coupons.setUpdatedAt(dto.getUpdatedAt());
+        return coupons;
     }
 
     @Override
@@ -195,6 +195,11 @@ public class CouponsServiceImpl implements CouponsService {
     }
 
     @Override
+    public boolean isUsedCoupons(Long userId, Long couponId) {
+        return usedCouponRepository.findByUserIdAndCouponId(userId, couponId).isPresent();
+    }
+
+    @Override
     public Coupons checkValidCoupon(ValidCouponRequest request) {
         // Fetch active coupon directly
         Optional<Coupons> optionalCoupon = couponsRepository.findByCouponCodeAndActive(request.getCouponCode(), true);
@@ -226,12 +231,3 @@ public class CouponsServiceImpl implements CouponsService {
 
 
 }
-
-
-//sing up -> url pass karo chho F.D
-//url lo pwd + password
-//
-//zip -> ma decript +
-//amin zip ma password
-//
-//admin ma decript and password
