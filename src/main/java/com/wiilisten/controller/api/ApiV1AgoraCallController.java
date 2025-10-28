@@ -756,10 +756,14 @@ public class ApiV1AgoraCallController extends BaseController {
 		try {
 			BookedCalls bookedCalls = getServiceRegistry().getBookedCallsService().findOne(idRequestDto.getId());
 			EndCallResponseDto response = getResponseForEndCall(bookedCalls);
-			CouponsResponseDTO couponsResponseDTO = couponsService.getCouponById(bookedCalls.getCouponId());
-			if (couponsResponseDTO != null) {
-				response.setAppliedDiscountCode(couponsResponseDTO.getCouponCode());
+			if (bookedCalls.getCouponId() != null) {
+				CouponsResponseDTO couponsResponseDTO = couponsService.getCouponById(bookedCalls.getCouponId());
+				if (couponsResponseDTO != null) {
+					response.setAppliedDiscountCode(couponsResponseDTO.getCouponCode());
+				}
 			}
+
+
 			Optional.ofNullable(bookedCalls.getId()).ifPresent(response::setId);
 			Optional.ofNullable(bookedCalls.getPayableAmount()).ifPresent(response::setPayableAmount);
 			Optional.ofNullable(bookedCalls.getSubTotal()).ifPresent(response::setSubTotal);
