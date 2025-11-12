@@ -238,4 +238,8 @@ public class ListenerProfileServiceImpl extends BaseServiceImpl<ListenerProfile,
 		return getDaoFactory().getListenerProfileRepository().findProfilesByCreatedAtBetweenAndMinEarning(startDate, endDate, amount);
 	}
 
+    public List<ListenerProfile> getAllListenersWithEarnings() {
+        return getDaoFactory().getListenerProfileRepository().findAllWithRemainingEarnings();
+    }
+
 }

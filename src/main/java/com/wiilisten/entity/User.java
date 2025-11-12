@@ -84,7 +84,11 @@ public class User {
 	private Boolean active;
 	
 	private String stripeCustomerId;
-	
+
+    private String stripeAccountId;
+
+    private String externalAccountId;
+
 	private String paymentIntent;
 	
 	private String jwtToken;

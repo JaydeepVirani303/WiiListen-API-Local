@@ -136,4 +136,11 @@ public interface ListenerProfileRepository extends BaseRepository<ListenerProfil
 			"AND lp.active = TRUE")
 	List<ListenerProfile> findTop10ActiveAdvertisementListeners(Pageable pageable);
 
+//	@Query("SELECT lp FROM ListenerProfile lp WHERE lp.totalEarning > 0 AND lp.active = true")
+//	List<ListenerProfile> findAllWithEarnings();
+
+    @Query("SELECT lp FROM ListenerProfile lp " +
+            "WHERE (lp.totalEarning - COALESCE(lp.totalPaidEarning, 0)) > 0 " +
+            "AND lp.active = true")
+    List<ListenerProfile> findAllWithRemainingEarnings();
 }

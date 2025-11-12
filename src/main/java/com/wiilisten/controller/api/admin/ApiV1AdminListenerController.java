@@ -6,9 +6,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.*;
+import com.stripe.net.RequestOptions;
+import com.stripe.param.AccountLinkCreateParams;
+import com.stripe.param.PayoutCreateParams;
+import com.stripe.param.TransferCreateParams;
+import com.wiilisten.entity.*;
+import com.wiilisten.repo.ListenerProfileRepository;
+import com.wiilisten.repo.PaymentStatusHistoryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,15 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.amazonaws.services.dynamodbv2.xspec.M;
-import com.stripe.model.Payout;
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.AdministrativeNotification;
-import com.wiilisten.entity.BlockedUser;
-import com.wiilisten.entity.ListenerAvailability;
-import com.wiilisten.entity.ListenerBankDetails;
-import com.wiilisten.entity.ListenerProfile;
-import com.wiilisten.entity.User;
-import com.wiilisten.entity.UserRatingAndReview;
 import com.wiilisten.enums.ErrorDataEnum;
 import com.wiilisten.enums.SuccessMsgEnum;
 import com.wiilisten.request.IdRequestDto;
@@ -40,6 +44,16 @@ import com.wiilisten.utils.ApplicationURIConstants;
 @RequestMapping(value = ApplicationURIConstants.API + ApplicationURIConstants.V1 + ApplicationURIConstants.ADMIN
 		+ ApplicationURIConstants.LISTENER)
 public class ApiV1AdminListenerController extends BaseController {
+
+	@Value("${stripe.SecretKey}")
+	private String StripeKey;
+
+	@Autowired
+	PaymentStatusHistoryRepository paymentStatusHistoryRepository;
+
+	@Autowired
+	ListenerProfileRepository listenerProfileRepository;
+
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(ApiV1AdminListenerController.class);
 
@@ -317,102 +331,181 @@ public class ApiV1AdminListenerController extends BaseController {
 	}
 
 	@PostMapping(ApplicationURIConstants.PAYMENT)
-	public ResponseEntity<Object> getPaymentDetails(@RequestBody IdRequestDto idRequestDto) {
-
+	public ResponseEntity<Object> payEarningsManually(@RequestBody IdRequestDto idRequestDto) {
 		LOGGER.info(ApplicationConstants.ENTER_LABEL);
 
 		try {
-
+			Stripe.apiKey = StripeKey;
 			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
 					.findByIdAndActiveTrue(idRequestDto.getId());
+
 			if (listener == null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices()
 						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
 			}
-//			ListenerBankDetails bankDetails = getServiceRegistry().getListenerBankDetailsService()
-//					.findByUserAndActiveTrue(listener.getUser());
-			ListenerResponseDto response = new ListenerResponseDto();
 
-//			if (bankDetails == null) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.BANK_DETAILS_NOT_EXIST.getCode()));
-//			}
-
-			Double total = listener.getTotalEarning();
-			Double withdrawn = listener.getTotalPaidEarning();
-
-			Double totalEarnings = total - withdrawn;
-			response.setTotalEarning(totalEarnings);
-
-			Map<String, String> account = new HashMap<>();
-//			account.put("account_number", bankDetails.getAccountNumber());
-//			account.put("routing_number", bankDetails.getRoutingOrAbaNumber());
-//			account.put("account_holder_name", listener.getUserName());
-//			account.put("account_holder_type", bankDetails.getAccountType());
-//			account.put("currency", "usd");
-
-			Map<String, Object> accountdetail = getServiceRegistry().getPaymentService()
-					.createConnectedAccount(account);
-
-			System.err.println("accountdetail:>>>>>>>>>>> " + accountdetail);
-			if (accountdetail.get("failure_code") != null) {
-				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-				return ResponseEntity.ok(
-						getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.PAYMENT_FAILED.getCode()));
-			} else {
-
-				Long earnings = (Long) totalEarnings.longValue();
-
-				Map<String, Object> responseMap = new HashMap<>();
-				responseMap.put("account", accountdetail);
-				responseMap.put("totalEarnings", earnings);
-				
-
-				Map<String, Object> transfer = getServiceRegistry().getPaymentService().createTransfer(responseMap);
-				
-				System.err.println("transfer:>>>>>>>>>>>> " + transfer);
-
-				if (transfer.get("failure_code") != null) {
-					LOGGER.info(ApplicationConstants.EXIT_LABEL);
-					return ResponseEntity.ok(getCommonServices()
-							.generateBadResponseWithMessageKey(ErrorDataEnum.PAYMENT_FAILED.getCode()));
-				} else {
-
-					Map<String, Object> transferResponse = new HashMap<>();
-					transferResponse.put("transfer", transfer);
-					transferResponse.put("totalEarnings", totalEarnings);
-
-					Map<String, Object> payout = getServiceRegistry().getPaymentService()
-							.createPayout(transferResponse);
-					
-					System.err.println("payout:>>>>>>>>>>>>> " + payout);
-
-					if (payout.get("failure_code") != null) {
-						LOGGER.info(ApplicationConstants.EXIT_LABEL);
-						return ResponseEntity.ok(getCommonServices()
-								.generateBadResponseWithMessageKey(ErrorDataEnum.PAYMENT_FAILED.getCode()));
-					} else {
-
-						listener.setTotalPaidEarning(0D);
-						listener.setPaymentlog(payout.toString());
-						getServiceRegistry().getListenerProfileService().saveORupdate(listener);
-
-						LOGGER.info(ApplicationConstants.EXIT_LABEL);
-						return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
-
-					}
-				}
-
+			User user = listener.getUser();
+			if (user.getStripeAccountId() == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.STRIPE_ACCOUNT_NOT_FOUND.getCode()));
 			}
+
+			if (user.getExternalAccountId() == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.BANK_DETAILS_NOT_EXIST.getCode()));
+			}
+
+			// --- Step 1: Check Platform Balance ---
+			Balance balance = Balance.retrieve();
+			long available = balance.getAvailable().stream()
+					.filter(b -> "usd".equalsIgnoreCase(b.getCurrency()))
+					.mapToLong(Balance.Available::getAmount)
+					.sum();
+
+			if (available <= 0) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.INSUFFICIENT_BALANCE.getCode()));
+			}
+
+			// --- Step 2: Calculate Amount ---
+			Double totalEarnings = listener.getTotalEarning() != null ? listener.getTotalEarning() : 0.0;
+			Double totalPaidEarnings = listener.getTotalPaidEarning() != null ? listener.getTotalPaidEarning() : 0.0;
+
+			Double remainingEarnings = 0.0;
+			if (totalEarnings > totalPaidEarnings) {
+				remainingEarnings = totalEarnings - totalPaidEarnings;
+			}
+
+			long amountInCents = Math.round(remainingEarnings * 100);
+
+			if (available < amountInCents) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.INSUFFICIENT_BALANCE.getCode()));
+			}
+
+			// --- Step 3: Transfer (Platform → Connected Account) ---
+			TransferCreateParams transferParams = TransferCreateParams.builder()
+					.setAmount(amountInCents)
+					.setCurrency("usd")
+					.setDestination(user.getStripeAccountId())
+					.setDescription("Manual payout for listener earnings ID: " + listener.getId())
+					.build();
+
+			Transfer transfer = Transfer.create(transferParams);
+			LOGGER.info("Transfer successful, ID: {}", transfer.getId());
+
+			// --- Step 4: Payout (Connected Account → Bank) ---
+			RequestOptions connectedAccountOpts = RequestOptions.builder()
+					.setStripeAccount(user.getStripeAccountId())
+					.build();
+
+			PayoutCreateParams payoutParams = PayoutCreateParams.builder()
+					.setAmount(amountInCents)
+					.setCurrency("usd")
+					.setDescription("Payout to bank for listener ID: " + listener.getId())
+					.build();
+
+			Payout payout = Payout.create(payoutParams, connectedAccountOpts);
+			LOGGER.info("Payout successful, ID: {}", payout.getId());
+
+			// --- Step 5: Update DB ---
+			if (listener.getTotalPaidEarning() == null) {
+				listener.setTotalPaidEarning(remainingEarnings);
+			} else {
+				listener.setTotalPaidEarning(listener.getTotalPaidEarning() + remainingEarnings);
+			}
+			listener.setPaymentlog("Transfer: " + transfer.getId() + ", Payout: " + payout.getId());
+			getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+
+			// --- Step 6: Return Response ---
+			Map<String, Object> response = Map.of(
+					"listenerId", listener.getId(),
+					"amountPaid", remainingEarnings,
+					"currency", "USD"
+			);
+			listenerProfileRepository.save(listener);
+			savePaymentHistory(new PaymentStatusHistory(payout.getId(), transfer.getId(), listener.getId(), (double) amountInCents / 100, "USD", listener.getUserName(), user.getEmail(), user.getContactNumber()));
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
+
+		} catch (StripeException e) {
+			LOGGER.error("Stripe error during payout: {}", e.getMessage(), e);
+			return ResponseEntity.ok(getCommonServices()
+					.generateBadResponseWithMessageKey(ErrorDataEnum.STRIPE_API_ERROR.getCode()));
+		} catch (Exception e) {
+			LOGGER.error("Unexpected error: {}", e.getMessage(), e);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	public PaymentStatusHistory savePaymentHistory(PaymentStatusHistory payment) {
+		return paymentStatusHistoryRepository.save(payment);
+	}
+
+	@PostMapping(ApplicationURIConstants.REFRESH_KYC_LINK)
+	public ResponseEntity<Object> createOrRefreshStripeAccountLink(@RequestBody IdRequestDto idRequestDto) {
+		LOGGER.info("ENTER :: createOrRefreshStripeAccountLink");
+		try {
+			Stripe.apiKey = StripeKey;
+			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+					.findByIdAndActiveTrue(idRequestDto.getId());
+
+			if (listener == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
+			}
+
+			if (listener.getUser() == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
+			}
+
+			User user = listener.getUser();
+
+			// Step 1: Retrieve the connected account ID (stored in your DB)
+			String connectedAccountId = user.getStripeAccountId();
+
+			if (connectedAccountId == null || connectedAccountId.isEmpty()) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateFailureResponse("Stripe account ID not found for this listener."));
+			}
+
+			// Step 2: Retrieve the account status from Stripe
+			Account account = Account.retrieve(connectedAccountId);
+
+			// Step 3: Check if the account is fully onboarded
+			boolean detailsSubmitted = Boolean.TRUE.equals(account.getDetailsSubmitted());
+			boolean payoutsEnabled = Boolean.TRUE.equals(account.getPayoutsEnabled());
+
+			if (detailsSubmitted && payoutsEnabled) {
+				// Onboarding already done
+				return ResponseEntity.ok(getCommonServices()
+						.generateGenericSuccessResponse("Account is already fully onboarded."));
+			}
+
+			// Step 4: If not onboarded, create a new onboarding link
+			AccountLinkCreateParams params = AccountLinkCreateParams.builder()
+					.setAccount(connectedAccountId)
+					.setRefreshUrl("https://yourdomain.com/reauth")
+					.setReturnUrl("https://yourdomain.com/success")
+					.setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
+					.build();
+
+			AccountLink accountLink = AccountLink.create(params);
+
+			// Step 5: Return the new onboarding URL to the frontend
+			Map<String, Object> response = new HashMap<>();
+			response.put("kycLink", accountLink.getUrl());
+
+			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink");
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
 
 		} catch (Exception e) {
 			e.printStackTrace();
-			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink with error");
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
-
 	}
+
 
 }

@@ -54,8 +54,12 @@ public enum ErrorDataEnum {
 	NO_ACTIVE_LISTENER_FOUND("no.active.listener.found"),
 	INVALID_BANK_DETAILS("invalid.bank.details"),
 	BANK_DETAILS_NOT_EXIST("bank.details.not.exist"),
+    STRIPE_API_ERROR("something.went.wrong.in.stripe"),
+    NO_PENDING_PAYMENT("no.pending.payment"),
+    STRIPE_ACCOUNT_NOT_FOUND("stripe.account.not.found"),
+    INSUFFICIENT_BALANCE("insufficient.balance"),
 	PAYMENT_FAILED("payment.failed"),;
-	
+
     private String code;
 
     private ErrorDataEnum(final String code) {

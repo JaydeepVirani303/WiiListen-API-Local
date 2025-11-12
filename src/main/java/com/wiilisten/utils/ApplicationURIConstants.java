@@ -115,6 +115,7 @@ public class ApplicationURIConstants {
 	public static final String ANALYTICS="/analytics";
 	public static final String COMMENT="/comment";
 	public static final String PAYMENT="/payment";
+    public static final String REFRESH_KYC_LINK = "/refresh-kyc-link";
 	public static final String SLIP="/slip";
 	
 	
@@ -137,6 +138,10 @@ public class ApplicationURIConstants {
     public static final String GET_PDF = "/get-pdf";
 
 	public static final String USE = "/use";
+    public static final String EARNING_LISTENER = "/earning-listener";
+    public static final String PAYMENT_TYPE = "/payment-type";
+    public static final String PAYMENT_TYPE_ALL = "/payment-type-all";
+    public static final String PAYMENT_STATUS_HISTORY = "/payment-status-history";
 
 	private ApplicationURIConstants() {
 

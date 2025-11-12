@@ -1,22 +1,22 @@
 package com.wiilisten.controller.api.admin;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
+import com.wiilisten.entity.*;
+import com.wiilisten.enums.PaymentFrequency;
+import com.wiilisten.enums.PaymentType;
+import com.wiilisten.repo.PaymentStatusHistoryRepository;
+import com.wiilisten.service.ListenerPaySchedulerConfigService;
+import com.wiilisten.service.impl.ListenerPaySchedulerConfigServiceImpl;
+import com.wiilisten.utils.ServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.wiilisten.controller.BaseController;
-import com.wiilisten.entity.BookedCalls;
-import com.wiilisten.entity.CallerProfile;
-import com.wiilisten.entity.EarningHistory;
-import com.wiilisten.entity.ListenerProfile;
 import com.wiilisten.request.CallManageRequestDto;
 import com.wiilisten.request.EarningHistoryRequestDto;
 import com.wiilisten.response.DashboardCountResponseDto;
@@ -35,6 +35,15 @@ public class ApiV1AdminDashboardController extends BaseController {
 
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	@Autowired
+	private ServiceRegistry serviceRegistry;
+
+	@Autowired
+	private PaymentStatusHistoryRepository paymentStatusHistoryRepository;
+
+	@Autowired
+	private ListenerPaySchedulerConfigService listenerPaySchedulerConfigService;
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(ApiV1AdminDashboardController.class);
 
@@ -237,5 +246,107 @@ public class ApiV1AdminDashboardController extends BaseController {
 	 * response.setEarningCount(getServiceRegistry().getEarningHistoryService().
 	 * countDistinctUserBy()); response.setListenerCount(listenerProfiles.size()); }
 	 */
+
+	@GetMapping(ApplicationURIConstants.EARNING_LISTENER)
+	public ResponseEntity<Object> getListenersWithEarnings() {
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+
+		try {
+			// Step 1: Get all listeners who have totalEarning > 0
+			List<ListenerProfile> listeners = serviceRegistry
+					.getListenerProfileService()
+					.getAllListenersWithEarnings();
+
+			// Step 3: Wrap it in a success response (same as your dashboard method)
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(listeners));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	@PostMapping(ApplicationURIConstants.PAYMENT_TYPE)
+	public ResponseEntity<Object> setScheduler(@RequestParam PaymentType type,
+											   @RequestParam(required = false) PaymentFrequency frequency) {
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+
+		try {
+			ListenerPaySchedulerConfig config;
+
+			// Handle case when frequency is not passed
+			if (frequency == null) {
+				config = listenerPaySchedulerConfigService.findByType(type.toString());
+			} else {
+				config = listenerPaySchedulerConfigService.findByTypeAndFrequency(type.toString(), frequency.toString());
+			}
+
+			if (config == null) {
+				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+				return ResponseEntity.ok(getCommonServices().generateFailureResponse("Configuration not found."));
+			}
+
+			listenerPaySchedulerConfigService.activateConfig(config.getId());
+
+			String message = "Scheduler updated to " + type +
+					(frequency != null ? " (" + frequency + ")" : "");
+
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(message));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	@GetMapping(ApplicationURIConstants.PAYMENT_TYPE_ALL)
+	public ResponseEntity<Object> getAllSchedulerConfigs() {
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+
+		try {
+			List<ListenerPaySchedulerConfig> configs = listenerPaySchedulerConfigService.getAllSchedulerConfigs();
+
+			if (configs == null || configs.isEmpty()) {
+				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+				return ResponseEntity.ok(getCommonServices().generateFailureResponse("No configurations found."));
+			}
+
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(configs));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	@GetMapping(ApplicationURIConstants.PAYMENT_STATUS_HISTORY)
+	public ResponseEntity<Object> getAllPaymentStatusHistory() {
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+
+		try {
+			List<PaymentStatusHistory> histories = paymentStatusHistoryRepository.findAll();
+
+			if (histories.isEmpty()) {
+				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+				return ResponseEntity.ok(getCommonServices().generateFailureResponse("No payment status history found."));
+			}
+
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(histories));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+
 
 }

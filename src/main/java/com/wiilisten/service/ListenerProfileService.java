@@ -97,4 +97,6 @@ public interface ListenerProfileService extends BaseService<ListenerProfile, Lon
             List<Long> listenerIds);
 
 	public List<ListenerProfile> findProfilesByCreatedAtBetweenAndMinEarning(LocalDateTime startDate, LocalDateTime endDate, Double amount);
+
+    List<ListenerProfile> getAllListenersWithEarnings();
 }
