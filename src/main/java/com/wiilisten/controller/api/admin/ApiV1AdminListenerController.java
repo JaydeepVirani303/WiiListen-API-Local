@@ -14,6 +14,7 @@ import com.stripe.param.AccountLinkCreateParams;
 import com.stripe.param.PayoutCreateParams;
 import com.stripe.param.TransferCreateParams;
 import com.wiilisten.entity.*;
+import com.wiilisten.enums.KycStatus;
 import com.wiilisten.repo.ListenerProfileRepository;
 import com.wiilisten.repo.PaymentStatusHistoryRepository;
 import org.slf4j.Logger;
@@ -22,10 +23,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.amazonaws.services.dynamodbv2.xspec.M;
 import com.wiilisten.controller.BaseController;
@@ -441,71 +439,4 @@ public class ApiV1AdminListenerController extends BaseController {
 	public PaymentStatusHistory savePaymentHistory(PaymentStatusHistory payment) {
 		return paymentStatusHistoryRepository.save(payment);
 	}
-
-	@PostMapping(ApplicationURIConstants.REFRESH_KYC_LINK)
-	public ResponseEntity<Object> createOrRefreshStripeAccountLink(@RequestBody IdRequestDto idRequestDto) {
-		LOGGER.info("ENTER :: createOrRefreshStripeAccountLink");
-		try {
-			Stripe.apiKey = StripeKey;
-			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
-					.findByIdAndActiveTrue(idRequestDto.getId());
-
-			if (listener == null) {
-				return ResponseEntity.ok(getCommonServices()
-						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-			}
-
-			if (listener.getUser() == null) {
-				return ResponseEntity.ok(getCommonServices()
-						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
-			}
-
-			User user = listener.getUser();
-
-			// Step 1: Retrieve the connected account ID (stored in your DB)
-			String connectedAccountId = user.getStripeAccountId();
-
-			if (connectedAccountId == null || connectedAccountId.isEmpty()) {
-				return ResponseEntity.ok(getCommonServices()
-						.generateFailureResponse("Stripe account ID not found for this listener."));
-			}
-
-			// Step 2: Retrieve the account status from Stripe
-			Account account = Account.retrieve(connectedAccountId);
-
-			// Step 3: Check if the account is fully onboarded
-			boolean detailsSubmitted = Boolean.TRUE.equals(account.getDetailsSubmitted());
-			boolean payoutsEnabled = Boolean.TRUE.equals(account.getPayoutsEnabled());
-
-			if (detailsSubmitted && payoutsEnabled) {
-				// Onboarding already done
-				return ResponseEntity.ok(getCommonServices()
-						.generateGenericSuccessResponse("Account is already fully onboarded."));
-			}
-
-			// Step 4: If not onboarded, create a new onboarding link
-			AccountLinkCreateParams params = AccountLinkCreateParams.builder()
-					.setAccount(connectedAccountId)
-					.setRefreshUrl("https://yourdomain.com/reauth")
-					.setReturnUrl("https://yourdomain.com/success")
-					.setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
-					.build();
-
-			AccountLink accountLink = AccountLink.create(params);
-
-			// Step 5: Return the new onboarding URL to the frontend
-			Map<String, Object> response = new HashMap<>();
-			response.put("kycLink", accountLink.getUrl());
-
-			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink");
-			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink with error");
-			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-		}
-	}
-
-
 }

@@ -15,6 +15,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.*;
+import com.wiilisten.enums.*;
 import com.wiilisten.request.*;
 import com.wiilisten.utils.PdfEncryptionService;
 import lombok.Data;
@@ -27,12 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.stripe.Stripe;
 import com.wiilisten.controller.BaseController;
@@ -43,10 +39,6 @@ import com.wiilisten.entity.AdministrativeNotification;
 import com.wiilisten.entity.Language;
 import com.wiilisten.entity.User;
 import com.wiilisten.entity.TrainingMaterial;
-import com.wiilisten.enums.ErrorDataEnum;
-import com.wiilisten.enums.ListenerSignupStepEnum;
-import com.wiilisten.enums.SuccessMsgEnum;
-import com.wiilisten.enums.TrainingVideoProgressStatusEnum;
 import com.wiilisten.response.TrainingMaterialResponseDto;
 import com.wiilisten.utils.ApplicationConstants;
 import com.wiilisten.utils.ApplicationURIConstants;
@@ -811,6 +803,146 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 		} catch (Exception e) {
 			LOGGER.error("Unexpected Error: {}", e.getMessage(), e);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+//	@PostMapping(ApplicationURIConstants.KYC_STATUS)
+//	public ResponseEntity<Object> checkKycStatus(@RequestBody IdRequestDto idRequestDto) {
+//		getLoggedInUser();
+//		LOGGER.info("Checking KYC status for Listener ID: {}", idRequestDto.getId());
+//		try {
+//			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+//					.findByIdAndActiveTrue(idRequestDto.getId());
+//
+//			if (listener == null) {
+//				return ResponseEntity.ok(getCommonServices()
+//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
+//			}
+//
+//			if (listener.getUser() == null) {
+//				return ResponseEntity.ok(getCommonServices()
+//						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
+//			}
+//			User user = listener.getUser();
+//			if (listener.getUser().getStripeAccountId() == null) {
+//				return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.PENDING.toString())));
+//			}
+//			Stripe.apiKey = StripeKey;
+//			Account account = Account.retrieve(user.getStripeAccountId());
+//
+//			boolean detailsSubmitted = Boolean.TRUE.equals(account.getDetailsSubmitted());
+//			boolean chargesEnabled = Boolean.TRUE.equals(account.getChargesEnabled());
+//			boolean payoutsEnabled = Boolean.TRUE.equals(account.getPayoutsEnabled());
+//
+//			String kycStatus;
+//			if (detailsSubmitted && chargesEnabled && payoutsEnabled) {
+//				kycStatus = KycStatus.COMPLETED.toString();
+//			} else {
+//				kycStatus = KycStatus.PENDING.toString();
+//			}
+//
+//			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", kycStatus)));
+//
+//		} catch (StripeException e) {
+//			LOGGER.error("Stripe API Error: {}", e.getMessage(), e);
+//			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.ERROR.toString())));
+//		} catch (Exception e) {
+//			LOGGER.error("Unexpected Error: {}", e.getMessage(), e);
+//			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.ERROR.toString())));
+//		}
+//	}
+
+	@PostMapping(ApplicationURIConstants.KYC_STATUS)
+	public ResponseEntity<Object> checkKycStatus(@RequestBody IdRequestDto idRequestDto) {
+		User user = getLoggedInUser();
+		try {
+			if (user == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
+			}
+			if (user.getStripeAccountId() == null) {
+				return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.PENDING.toString())));
+			}
+			Stripe.apiKey = StripeKey;
+			Account account = Account.retrieve(user.getStripeAccountId());
+
+			boolean detailsSubmitted = Boolean.TRUE.equals(account.getDetailsSubmitted());
+			boolean chargesEnabled = Boolean.TRUE.equals(account.getChargesEnabled());
+			boolean payoutsEnabled = Boolean.TRUE.equals(account.getPayoutsEnabled());
+
+			String kycStatus;
+			if (detailsSubmitted && chargesEnabled && payoutsEnabled) {
+				kycStatus = KycStatus.COMPLETED.toString();
+			} else {
+				kycStatus = KycStatus.PENDING.toString();
+			}
+
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", kycStatus)));
+
+		} catch (StripeException e) {
+			LOGGER.error("Stripe API Error: {}", e.getMessage(), e);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.ERROR.toString())));
+		} catch (Exception e) {
+			LOGGER.error("Unexpected Error: {}", e.getMessage(), e);
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(Map.of("kycStatus", KycStatus.ERROR.toString())));
+		}
+	}
+
+
+	@PostMapping(ApplicationURIConstants.REFRESH_KYC_LINK)
+	public ResponseEntity<Object> createOrRefreshStripeAccountLink(@RequestBody IdRequestDto idRequestDto) {
+		LOGGER.info("ENTER :: createOrRefreshStripeAccountLink");
+		User user = getLoggedInUser();
+		try {
+			Stripe.apiKey = StripeKey;
+
+			if (user == null) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
+			}
+
+			// Step 1: Retrieve the connected account ID (stored in your DB)
+			String connectedAccountId = user.getStripeAccountId();
+
+			if (connectedAccountId == null || connectedAccountId.isEmpty()) {
+				return ResponseEntity.ok(getCommonServices()
+						.generateFailureResponse("Stripe account ID not found for this listener."));
+			}
+
+			// Step 2: Retrieve the account status from Stripe
+			Account account = Account.retrieve(connectedAccountId);
+
+			// Step 3: Check if the account is fully onboarded
+			boolean detailsSubmitted = Boolean.TRUE.equals(account.getDetailsSubmitted());
+			boolean payoutsEnabled = Boolean.TRUE.equals(account.getPayoutsEnabled());
+
+			if (detailsSubmitted && payoutsEnabled) {
+				// Onboarding already done
+				return ResponseEntity.ok(getCommonServices()
+						.generateGenericSuccessResponse("Account is already fully onboarded."));
+			}
+
+			// Step 4: If not onboarded, create a new onboarding link
+			AccountLinkCreateParams params = AccountLinkCreateParams.builder()
+					.setAccount(connectedAccountId)
+					.setRefreshUrl("https://yourdomain.com/reauth")
+					.setReturnUrl("http://localhost:63342/WiiListen-API-Local/src/main/resources/templates/success.html")
+					.setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
+					.build();
+
+			AccountLink accountLink = AccountLink.create(params);
+
+			// Step 5: Return the new onboarding URL to the frontend
+			Map<String, Object> response = new HashMap<>();
+			response.put("kycLink", accountLink.getUrl());
+
+			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink");
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info("EXIT :: createOrRefreshStripeAccountLink with error");
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}

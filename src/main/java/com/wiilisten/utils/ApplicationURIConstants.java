@@ -116,6 +116,7 @@ public class ApplicationURIConstants {
 	public static final String COMMENT="/comment";
 	public static final String PAYMENT="/payment";
     public static final String REFRESH_KYC_LINK = "/refresh-kyc-link";
+	public static final String KYC_STATUS = "/kyc-status";
 	public static final String SLIP="/slip";
 	
 	
