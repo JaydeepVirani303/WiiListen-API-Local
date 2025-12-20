@@ -27,6 +27,7 @@ public class ExpireAdsScheduler extends BaseController {
 
     // Every day at midnight
     @Scheduled(cron = "0 0 0 * * ?")
+//    @Scheduled(cron = "*/5 * * * * ?")
     public void expireAdvertisements() {
         LOGGER.info("ExpireAdsScheduler::expireAdvertisements Starting");
 

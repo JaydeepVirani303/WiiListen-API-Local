@@ -253,7 +253,7 @@ public class ApiV1StripePaymentController extends BaseController {
 
 		// Check if user already has an active subscription of same type that is not expired
 		UserSubscription existingSubscription = getServiceRegistry().getUserSubscriptionService()
-				.findTopByUserAndTypeAndActiveTrueOrderByIdDesc(user, idRequestDto.getType());
+				.findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(user, idRequestDto.getType(), LocalDateTime.now());
 
 		if (existingSubscription != null && existingSubscription.getExpiryDate() != null &&
 				existingSubscription.getExpiryDate().isAfter(LocalDateTime.now())) {

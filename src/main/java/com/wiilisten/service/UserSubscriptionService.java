@@ -12,6 +12,12 @@ public interface UserSubscriptionService extends BaseService<UserSubscription, L
 
     UserSubscription findTopByUserAndTypeAndActiveTrueOrderByIdDesc(User user, String type);
 
+    UserSubscription findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(
+            User user,
+            String type,
+            LocalDateTime now
+    );
+
     List<UserSubscription> findByActiveTrueAndExpiryDateBefore(LocalDateTime dateTime);
 
     List<UserSubscription> findAllByUserAndActiveTrue(User user);

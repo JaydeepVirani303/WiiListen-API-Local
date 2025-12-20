@@ -19,4 +19,11 @@ public interface UserSubscriptionRepository extends BaseRepository<UserSubscript
 
     List<UserSubscription> findAllByUserAndActiveTrue(User user);
 
+    UserSubscription findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(
+            User user,
+            String type,
+            LocalDateTime now
+    );
+
+
 }

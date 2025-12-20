@@ -30,6 +30,11 @@ public class UserSubscriptionServiceImpl extends BaseServiceImpl<UserSubscriptio
     }
 
     @Override
+    public UserSubscription findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(User user, String type, LocalDateTime now) {
+        return getDaoFactory().getUserSubscriptionRepository().findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(user, type, now);
+    }
+
+    @Override
     public List<UserSubscription> findByActiveTrueAndExpiryDateBefore(LocalDateTime dateTime) {
         return getDaoFactory().getUserSubscriptionRepository().findByActiveTrueAndExpiryDateBefore(dateTime);
     }
