@@ -34,9 +34,9 @@ public class EarningResponseDto {
 	private Boolean active;
 
 	@JsonProperty("created_at")
-	private Date createdAt;
+	private String createdAt;
 
 	@JsonProperty("updated_at")
-	private Date updatedAt;
+	private String updatedAt;
 
 }

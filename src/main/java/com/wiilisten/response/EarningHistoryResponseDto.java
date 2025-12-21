@@ -19,10 +19,10 @@ import lombok.Setter;
 public class EarningHistoryResponseDto {
 	
 	@JsonProperty("start_date")
-	private Date startDate;
+	private String startDate;
 	
 	@JsonProperty("end_date")
-    private Date endDate;
+	private String endDate;
 	
 	@JsonProperty("total_income")
     private Double totalIncome;

@@ -1,5 +1,6 @@
 package com.wiilisten.controller.api.listener;
 
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,14 +11,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -99,20 +93,20 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 			Date lastDate = earningHistories.get(size - 1).getCreatedAt();
 			List<Object> allValues = new ArrayList<>();
 			if (typeRequestDto.getType().equals(ApplicationConstants.WEEKLY)) {
-				allValues = getWeeklyData(earningHistories, user, ApplicationConstants.WEEKLY);
+				allValues = getWeeklyData(earningHistories, user, ApplicationConstants.WEEKLY, null);
 			} else if (typeRequestDto.getType().equals(ApplicationConstants.MONTHLY)) {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = splitDateRangeIntoMonthRanges(lastDate,
 						firstDate, ApplicationConstants.MONTHLY);
 				LOGGER.info("size" + splitDateRangeIntoMonthRanges.size());
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY, null);
 			} else if (typeRequestDto.getType().equals(ApplicationConstants.YEARLY)) {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = splitDateRangeIntoMonthRanges(lastDate,
 						firstDate, ApplicationConstants.YEARLY);
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.YEARLY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.YEARLY, null);
 			} else if (typeRequestDto.getType().equals(ApplicationConstants.DAILY)) {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = splitDateRangeIntoMonthRanges(lastDate,
 						firstDate, ApplicationConstants.DAILY);
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY, null);
 
 			}
 
@@ -230,6 +224,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 
 		try {
 			User user = getLoggedInUser();
+			String timeZone = typeRequestDto.getRequestedTimeZone();
 			List<EarningHistory> earningHistories = getServiceRegistry().getEarningHistoryService()
 					.findByActiveTrueAndUserOrderByCreatedAtDesc(user);
 			if (earningHistories.isEmpty()) {
@@ -247,7 +242,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				LOGGER.info(
 						"weekly start and end date is {}" + convertToLocalDateViaInstant(rangeResponseDto.getStart())
 								+ " " + convertToLocalDateViaInstant(rangeResponseDto.getEnd()));
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY, timeZone);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.WEEKLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
@@ -256,7 +251,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getDateRanges(ApplicationConstants.MONTHLY,
 						convertToLocalDateViaInstant(rangeResponseDto.getStart()),
 						convertToLocalDateViaInstant(rangeResponseDto.getEnd()));
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.MONTHLY, timeZone);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.MONTHLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
@@ -265,13 +260,13 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getDateRanges(ApplicationConstants.YEARLY,
 						convertToLocalDateViaInstant(rangeResponseDto.getStart()),
 						convertToLocalDateViaInstant(rangeResponseDto.getEnd()));
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.YEARLY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.YEARLY, timeZone);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.YEARLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
 			} else if (typeRequestDto.getType().equals(ApplicationConstants.DAILY)) {
 				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getTwoHourIntervals();
-				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY);
+				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY, timeZone);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.YEARLY, allValues);
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
@@ -285,6 +280,18 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 
+	}
+
+	private String formatDate(Date date, String timeZone) {
+		if (date == null)
+			return null;
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		if (timeZone != null && !timeZone.isEmpty()) {
+			sdf.setTimeZone(TimeZone.getTimeZone(timeZone));
+		} else {
+			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		}
+		return sdf.format(date);
 	}
 
 	public static List<DateRangeResponseDto> getTwoHourIntervals() {
@@ -464,7 +471,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 		return dateRanges;
 	}
 
-	public List<Object> getWeeklyData(List<EarningHistory> earningHistories, User user, String type) {
+	public List<Object> getWeeklyData(List<EarningHistory> earningHistories, User user, String type, String timeZone) {
 		Integer size = earningHistories.size();
 		Date firstDate = new Date();
 		Date lastDate = earningHistories.get(size - 1).getCreatedAt();
@@ -491,29 +498,31 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 			earnings = getServiceRegistry().getEarningHistoryService()
 					.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(startOfWeek,
 							incrementDate(endOfWeek), user);
-			response.setStartDate(incrementDate(startOfWeek));
-			response.setEndDate(incrementDate(endOfWeek));
+			response.setStartDate(formatDate(incrementDate(startOfWeek), timeZone));
+			response.setEndDate(formatDate(incrementDate(endOfWeek), timeZone));
 			LOGGER.info("start and end date is {}" + incrementDate(startOfWeek) + " " + incrementDate(endOfWeek));
 			if (currentIndex == 0) {
 				LOGGER.info("inside if" + lastDate);
 				earnings = getServiceRegistry().getEarningHistoryService()
 						.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(startOfWeek,
 								incrementDate(lastDate), user);
-				response.setStartDate(incrementDate(startOfWeek));
-				response.setEndDate(lastDate);
+				response.setStartDate(formatDate(incrementDate(startOfWeek), timeZone));
+				response.setEndDate(formatDate(lastDate, timeZone));
 			}
 			if (currentIndex == sizeOfMap - 1) {
 				LOGGER.info("inside if" + lastDate);
 				earnings = getServiceRegistry().getEarningHistoryService()
 						.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(startOfWeek, firstDate, user);
-				response.setStartDate(incrementDate(startOfWeek));
-				response.setEndDate(firstDate);
+				response.setStartDate(formatDate(incrementDate(startOfWeek), timeZone));
+				response.setEndDate(formatDate(firstDate, timeZone));
 			}
 			List<EarningResponseDto> earningResponseDtos = new ArrayList<>();
 			if (!earnings.isEmpty()) {
 				earnings.forEach(earning -> {
 					EarningResponseDto dto = new EarningResponseDto();
-					BeanUtils.copyProperties(earning, dto);
+					BeanUtils.copyProperties(earning, dto, "createdAt", "updatedAt");
+					dto.setCreatedAt(formatDate(earning.getCreatedAt(), timeZone));
+					dto.setUpdatedAt(formatDate(earning.getUpdatedAt(), timeZone));
 					earningResponseDtos.add(dto);
 				});
 			}
@@ -548,7 +557,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 	}
 
 	public List<Object> getMonthlyData(List<DateRangeResponseDto> splitDateRangeIntoMonthRanges, User user,
-			String type) {
+									   String type, String timeZone) {
 		Integer sizeOfMap = splitDateRangeIntoMonthRanges.size();
 		AtomicInteger currentIndex = new AtomicInteger(0);
 		List<Object> allValues = new ArrayList<>();
@@ -556,8 +565,8 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 			splitDateRangeIntoMonthRanges.forEach(range -> {
 				LOGGER.info("start date and end date {}" + range.getStart() + " " + range.getEnd());
 				EarningHistoryResponseDto response = new EarningHistoryResponseDto();
-				response.setStartDate(incrementDate(range.getStart()));
-				response.setEndDate(incrementDate(range.getEnd()));
+				response.setStartDate(formatDate(incrementDate(range.getStart()), timeZone));
+				response.setEndDate(formatDate(incrementDate(range.getEnd()), timeZone));
 				List<EarningHistory> earnings = new ArrayList<>();
 				earnings = getServiceRegistry().getEarningHistoryService()
 						.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(range.getStart(),
@@ -566,14 +575,16 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 					earnings = getServiceRegistry().getEarningHistoryService()
 							.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(range.getStart(),
 									range.getEnd(), user);
-					response.setStartDate(range.getStart());
-					response.setEndDate(range.getEnd());
+					response.setStartDate(formatDate(range.getStart(), timeZone));
+					response.setEndDate(formatDate(range.getEnd(), timeZone));
 				}
 				List<EarningResponseDto> earningResponseDtos = new ArrayList<>();
 				if (!earnings.isEmpty()) {
 					earnings.forEach(earning -> {
 						EarningResponseDto dto = new EarningResponseDto();
-						BeanUtils.copyProperties(earning, dto);
+						BeanUtils.copyProperties(earning, dto, "createdAt", "updatedAt");
+						dto.setCreatedAt(formatDate(earning.getCreatedAt(), timeZone));
+						dto.setUpdatedAt(formatDate(earning.getUpdatedAt(), timeZone));
 						earningResponseDtos.add(dto);
 					});
 				}
@@ -612,15 +623,15 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 	}
 
 	public List<Object> getWeeklyDataForGraph(List<DateRangeResponseDto> splitDateRangeIntoMonthRanges, User user,
-			String type) {
+											  String type, String timeZone) {
 		AtomicInteger currentIndex = new AtomicInteger(0);
 		List<Object> allValues = new ArrayList<>();
 		if (!splitDateRangeIntoMonthRanges.isEmpty()) {
 			splitDateRangeIntoMonthRanges.forEach(range -> {
 				LOGGER.info("start date and end date {}" + range.getStart() + " " + range.getEnd());
 				EarningHistoryResponseDto response = new EarningHistoryResponseDto();
-				response.setStartDate(incrementDate(range.getStart()));
-				response.setEndDate(incrementDate(range.getEnd()));
+				response.setStartDate(formatDate(incrementDate(range.getStart()), timeZone));
+				response.setEndDate(formatDate(incrementDate(range.getEnd()), timeZone));
 				List<EarningHistory> earnings = new ArrayList<>();
 				earnings = getServiceRegistry().getEarningHistoryService()
 						.findByCreatedAtBetweenAndActiveTrueAndUserOrderByCreatedAtDesc(range.getStart(),
@@ -630,7 +641,9 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				if (!earnings.isEmpty()) {
 					earnings.forEach(earning -> {
 						EarningResponseDto dto = new EarningResponseDto();
-						BeanUtils.copyProperties(earning, dto);
+						BeanUtils.copyProperties(earning, dto, "createdAt", "updatedAt");
+						dto.setCreatedAt(formatDate(earning.getCreatedAt(), timeZone));
+						dto.setUpdatedAt(formatDate(earning.getUpdatedAt(), timeZone));
 						earningResponseDtos.add(dto);
 					});
 				}
