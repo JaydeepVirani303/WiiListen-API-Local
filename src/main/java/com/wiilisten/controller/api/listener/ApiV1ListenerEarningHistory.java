@@ -265,7 +265,7 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 				response.setAllValues(allValues);
 				response.setAverageIncome(totalIncomAverage);
 			} else if (typeRequestDto.getType().equals(ApplicationConstants.DAILY)) {
-				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getTwoHourIntervals();
+				List<DateRangeResponseDto> splitDateRangeIntoMonthRanges = getOneHourIntervals();
 				allValues = getMonthlyData(splitDateRangeIntoMonthRanges, user, ApplicationConstants.DAILY, timeZone);
 				Double totalIncomAverage = getTotalIncomAverage(ApplicationConstants.YEARLY, allValues);
 				response.setAllValues(allValues);
@@ -294,23 +294,44 @@ public class ApiV1ListenerEarningHistory extends BaseController {
 		return sdf.format(date);
 	}
 
-	public static List<DateRangeResponseDto> getTwoHourIntervals() {
+//	public static List<DateRangeResponseDto> getTwoHourIntervals() {
+//		LocalDate date = LocalDate.now();
+//		List<DateRangeResponseDto> intervals = new ArrayList<>();
+//
+//		LocalDateTime startOfDay = date.atStartOfDay();
+//		for (int hour = 0; hour < 24; hour += 2) {
+//			LocalDateTime start = startOfDay.plusHours(hour);
+//			LocalDateTime end = start.plusHours(2);
+//
+//			Date startDate = convertToDate(start);
+//			Date endDate = convertToDate(end);
+//			LOGGER.info("start date {}" + startDate + "end date {}" + endDate);
+//			intervals.add(new DateRangeResponseDto(startDate, endDate));
+//		}
+//
+//		return intervals;
+//	}
+
+	public static List<DateRangeResponseDto> getOneHourIntervals() {
 		LocalDate date = LocalDate.now();
 		List<DateRangeResponseDto> intervals = new ArrayList<>();
 
 		LocalDateTime startOfDay = date.atStartOfDay();
-		for (int hour = 0; hour < 24; hour += 2) {
+
+		for (int hour = 0; hour < 24; hour++) {
 			LocalDateTime start = startOfDay.plusHours(hour);
-			LocalDateTime end = start.plusHours(2);
+			LocalDateTime end = start.plusHours(1);
 
 			Date startDate = convertToDate(start);
 			Date endDate = convertToDate(end);
-			LOGGER.info("start date {}" + startDate + "end date {}" + endDate);
+
+			LOGGER.info("start date {} end date {}", startDate, endDate);
 			intervals.add(new DateRangeResponseDto(startDate, endDate));
 		}
 
 		return intervals;
 	}
+
 
 	public static List<DateRangeResponseDto> getDateRanges(String type, LocalDate startDate, LocalDate endDate) {
 		List<DateRangeResponseDto> ranges = new ArrayList<>();
