@@ -9,9 +9,9 @@ import com.wiilisten.entity.UserSubscription;
 import java.util.List;
 
 @Repository
-public interface UserSubscriptionRepository extends BaseRepository<UserSubscription, Long>{
-	
-	UserSubscription findByUserAndActiveTrue(User user);
+public interface UserSubscriptionRepository extends BaseRepository<UserSubscription, Long> {
+
+    UserSubscription findByUserAndActiveTrue(User user);
 
     UserSubscription findTopByUserAndTypeAndActiveTrueOrderByIdDesc(User user, String type);
 
@@ -22,8 +22,8 @@ public interface UserSubscriptionRepository extends BaseRepository<UserSubscript
     UserSubscription findTopByUserAndTypeAndActiveTrueAndExpiryDateAfterOrderByIdDesc(
             User user,
             String type,
-            LocalDateTime now
-    );
+            LocalDateTime now);
 
+    List<UserSubscription> findByActiveTrue();
 
 }
