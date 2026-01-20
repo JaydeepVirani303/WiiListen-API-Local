@@ -49,12 +49,6 @@ public class ApiV1CallerSearchController extends BaseController {
 			List<String> listenerConditions = new ArrayList<>();
 			List<Object> listenerParameters = new ArrayList<>();
 
-//			if (earningHistoryRequestDto.getName() == null || earningHistoryRequestDto.getName().isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(
-//						new ResponseWithDataAndPagination(response, 0L)));
-//			}
-			
 			if (earningHistoryRequestDto.getName().isEmpty()
 					&& earningHistoryRequestDto.getEducation() == null && earningHistoryRequestDto.getGender() == null
 					&& earningHistoryRequestDto.getStartDate() == null && earningHistoryRequestDto.getEndDate() == null
@@ -64,7 +58,7 @@ public class ApiV1CallerSearchController extends BaseController {
 			}
 
 			listenerConditions.add("lp.active = true");
-
+			listenerConditions.add("lp.isEligibleForPremiumCallSearch = true");
 			int paramIndex = 1;
 			LOGGER.info("before if ");
 			if (!earningHistoryRequestDto.getName().isEmpty()) {
@@ -143,15 +137,6 @@ public class ApiV1CallerSearchController extends BaseController {
 						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_FOUND.getCode()));
 			}
 
-//			listenerProfiles.forEach(listener -> {
-//				ListenerResponseDto listenerProfileDTO = new ListenerResponseDto();
-//				BeanUtils.copyProperties(listener, listenerProfileDTO);
-//				BeanUtils.copyProperties(listener.getUser(), listenerProfileDTO);
-//				listenerProfileDTO.setUserId(listener.getUser().getId());
-//				listenerProfileDTO.setListnerId(listener.getId());
-//				response.add(listenerProfileDTO);
-//			});
-
 			listenerProfiles.forEach(listener -> {
 				response.add(getCommonServices().convertListenerProfileEntityToDtoForCardLayout(listener));
 
@@ -167,77 +152,4 @@ public class ApiV1CallerSearchController extends BaseController {
 		}
 
 	}
-
-//	try { 
-//		User user = getLoggedInUser();
-//		CallerProfile callerProfile = getServiceRegistry().getCallerProfileService()
-//				.findByUserAndSearchSubscriptionStatusAndActiveTrue(user, ApplicationConstants.ACTIVE);
-//		if (callerProfile == null) {
-//			LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//			return ResponseEntity.ok(getCommonServices()
-//					.generateBadResponseWithMessageKey(ErrorDataEnum.NOT_PREMIUM_USER.getCode()));
-//		}
-//		List<ListenerResponseDto> response = new ArrayList<>();
-//		List<ListenerProfile> listenerProfiles = new ArrayList<>();
-//		if (earningHistoryRequestDto.getLocation() != null) {
-//			listenerProfiles = getServiceRegistry().getListenerProfileService()
-//					.findByLocationAndActiveTrue(earningHistoryRequestDto.getLocation());
-//			if (listenerProfiles.isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-//			}
-//		} else if (earningHistoryRequestDto.getEducation() != null) {
-//			listenerProfiles = getServiceRegistry().getListenerProfileService()
-//					.findByEducationAndActiveTrue(earningHistoryRequestDto.getEducation());
-//			if (listenerProfiles.isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-//			}
-//		} else if (earningHistoryRequestDto.getGender() != null) {
-//			listenerProfiles = getServiceRegistry().getListenerProfileService()
-//					.findByGenderAndActiveTrue(earningHistoryRequestDto.getGender());
-//			if (listenerProfiles.isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-//			}
-//		} else if (earningHistoryRequestDto.getLanguage() != null) {
-//			listenerProfiles = getServiceRegistry().getListenerProfileService()
-//					.findByLanguageNameListener(earningHistoryRequestDto.getLanguage());
-//			if (listenerProfiles.isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-//			}
-//		} else if (earningHistoryRequestDto.getAge() != null) {
-//			LocalDate today = LocalDate.now();
-//			LocalDate birthDate = today.minusYears(earningHistoryRequestDto.getAge());
-//			listenerProfiles = getServiceRegistry().getListenerProfileService()
-//					.findByDateOfBirthBetweenAndActiveTrueOrderByCreatedAtDesc(birthDate.withDayOfYear(1),
-//							birthDate.withDayOfYear(birthDate.lengthOfYear()));
-//			if (listenerProfiles.isEmpty()) {
-//				LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//				return ResponseEntity.ok(getCommonServices()
-//						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
-//			}
-//		}
-//
-//		listenerProfiles.forEach(listener -> {
-//			ListenerResponseDto listenerProfileDTO = new ListenerResponseDto();
-//			BeanUtils.copyProperties(listener, listenerProfileDTO);
-//			BeanUtils.copyProperties(listener.getUser(), listenerProfileDTO);
-//			listenerProfileDTO.setUserId(listener.getUser().getId());
-//			listenerProfileDTO.setListnerId(listener.getId());
-//			response.add(listenerProfileDTO);
-//		});
-//
-//		LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//		return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
-//	} catch (Exception e) {
-//		e.printStackTrace();
-//		LOGGER.info(ApplicationConstants.EXIT_LABEL);
-//		return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-//	}
 }
