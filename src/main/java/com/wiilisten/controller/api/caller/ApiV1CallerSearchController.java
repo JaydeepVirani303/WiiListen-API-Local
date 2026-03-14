@@ -58,7 +58,6 @@ public class ApiV1CallerSearchController extends BaseController {
 			}
 
 			listenerConditions.add("lp.active = true");
-			listenerConditions.add("lp.isEligibleForPremiumCallSearch = true");
 			int paramIndex = 1;
 			LOGGER.info("before if ");
 			if (!earningHistoryRequestDto.getName().isEmpty()) {
