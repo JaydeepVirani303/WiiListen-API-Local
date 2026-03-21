@@ -49,10 +49,12 @@ public class ApiV1CallerSearchController extends BaseController {
 			List<String> listenerConditions = new ArrayList<>();
 			List<Object> listenerParameters = new ArrayList<>();
 
-			if (earningHistoryRequestDto.getName().isEmpty()
-					&& earningHistoryRequestDto.getEducation() == null && earningHistoryRequestDto.getGender() == null
+			if ((earningHistoryRequestDto.getName() == null || earningHistoryRequestDto.getName().trim().isEmpty())
+					&& (earningHistoryRequestDto.getEducation() == null || earningHistoryRequestDto.getEducation().trim().isEmpty())
+					&& (earningHistoryRequestDto.getGender() == null || earningHistoryRequestDto.getGender().trim().isEmpty())
 					&& earningHistoryRequestDto.getStartDate() == null && earningHistoryRequestDto.getEndDate() == null
-					&& earningHistoryRequestDto.getLocation() == null && earningHistoryRequestDto.getIds().isEmpty()) {
+					&& (earningHistoryRequestDto.getLocation() == null || earningHistoryRequestDto.getLocation().trim().isEmpty())
+					&& (earningHistoryRequestDto.getIds() == null || earningHistoryRequestDto.getIds().isEmpty())) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices().generateResponseForNoDataFound());
 			}
@@ -60,25 +62,25 @@ public class ApiV1CallerSearchController extends BaseController {
 			listenerConditions.add("lp.active = true");
 			int paramIndex = 1;
 			LOGGER.info("before if ");
-			if (!earningHistoryRequestDto.getName().isEmpty()) {
+			if (earningHistoryRequestDto.getName() != null && !earningHistoryRequestDto.getName().trim().isEmpty()) {
 				LOGGER.info("inside name");
 				String tranformedName = StringUtils.trimAllWhitespace(earningHistoryRequestDto.getName()).toUpperCase();
-				listenerConditions.add("UPPER(REPLACE(lp.userName, ' ', '')) = ?" + paramIndex);
-				listenerParameters.add(tranformedName);
+				listenerConditions.add("UPPER(REPLACE(lp.userName, ' ', '')) LIKE ?" + paramIndex);
+				listenerParameters.add("%" + tranformedName + "%");
 				paramIndex++;
 			}
 			LOGGER.info("after if ");
-			if (earningHistoryRequestDto.getLocation() != null) {
+			if (earningHistoryRequestDto.getLocation() != null && !earningHistoryRequestDto.getLocation().trim().isEmpty()) {
 				listenerConditions.add("lp.location = ?" + paramIndex);
 				listenerParameters.add(earningHistoryRequestDto.getLocation());
 				paramIndex++;
 			}
-			if (earningHistoryRequestDto.getEducation() != null) {
+			if (earningHistoryRequestDto.getEducation() != null && !earningHistoryRequestDto.getEducation().trim().isEmpty()) {
 				listenerConditions.add("lp.education = ?" + paramIndex);
 				listenerParameters.add(earningHistoryRequestDto.getEducation());
 				paramIndex++;
 			}
-			if (earningHistoryRequestDto.getGender() != null) {
+			if (earningHistoryRequestDto.getGender() != null && !earningHistoryRequestDto.getGender().trim().isEmpty()) {
 				LOGGER.info("inside gender");
 				listenerConditions.add("lp.gender = ?" + paramIndex);
 				listenerParameters.add(earningHistoryRequestDto.getGender());
