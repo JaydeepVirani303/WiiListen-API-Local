@@ -153,5 +153,7 @@ public class UserProfileDto {
 	private String timeZone;
 
 	private List<PlanPurchaseDetailResponseDto> purchasedPlansDetail;
-	
+
+	@JsonProperty("total_earning")
+	private Double totalEarning;
 }

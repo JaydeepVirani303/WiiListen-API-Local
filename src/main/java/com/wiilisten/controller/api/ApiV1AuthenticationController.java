@@ -632,6 +632,7 @@ public class ApiV1AuthenticationController extends BaseController {
 				if (listener != null) {
 					response.setProfileId(listener.getId());
 					response.setIsAdvertisementActive(listener.getIsAdvertisementActive());
+					response.setTotalEarning(listener.getTotalEarning());
 				}
 					
 				if (listener.getIsEligibleForPremiumCallSearch() != null
