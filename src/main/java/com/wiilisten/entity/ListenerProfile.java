@@ -133,7 +133,7 @@ public class ListenerProfile {
 		trainingVideoProgress = TrainingVideoProgressStatusEnum.PENDING.getStatus();
 		currentTrainingVideo = 0L;
 		points = 0L;
-		profileStatus = ProfileStatusEnum.PENDING.getStatus();
+		profileStatus = ProfileStatusEnum.APPROVED.getStatus();
 		totalAttendedCalls = 0L;
 		totalCompletedMinutes = 0L;
 		totalEarning = 0.0;
