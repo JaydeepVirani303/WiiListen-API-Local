@@ -97,7 +97,8 @@ public enum SuccessMsgEnum {
 	ANALYTICS_UPDATED_SUCCESSFULLY("analytics.updated.successfully"),
 	COMMENT_UPDATED_SUCCESSFULLY("comment.updated.successfully"),
 	PLAN_ADDED_SUCCESSFULLY("plan.added.successfully"),
-	DATE_LIST_SUCCESSFULLY("date.list.successfully");
+    DATE_LIST_SUCCESSFULLY("date.list.successfully"),
+    W9FORM_STATUS_UPDATED_SUCCESSFULLY("w9form.status.updated.successfully");
 
 	
 	String code;

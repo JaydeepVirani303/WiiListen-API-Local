@@ -165,6 +165,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 					if (requestProfileDetails.getW9form() != null) {
 						listener.setW9Form(requestProfileDetails.getW9form());
+						listener.setW9formStatus(W9FormStatusEnum.PENDING.getStatus());
 						pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getW9form());
 					}
 
@@ -295,6 +296,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 			ListenerProfile listenerProfile = getServiceRegistry().getListenerProfileService()
 					.findByUserAndActiveTrue(user);
 			listenerProfile.setW9Form(requestDto.getType());
+			listenerProfile.setW9formStatus(W9FormStatusEnum.PENDING.getStatus());
 			getServiceRegistry().getListenerProfileService().saveORupdate(listenerProfile);
 
 			LOGGER.info(ApplicationConstants.EXIT_LABEL);

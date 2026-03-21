@@ -11,6 +11,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import com.wiilisten.enums.ListenerSignupStepEnum;
 import com.wiilisten.enums.ProfileStatusEnum;
 import com.wiilisten.enums.TrainingVideoProgressStatusEnum;
+import com.wiilisten.enums.W9FormStatusEnum;
 import com.wiilisten.utils.ApplicationConstants;
 
 import jakarta.persistence.Column;
@@ -105,6 +106,8 @@ public class ListenerProfile {
 	private Boolean isAdvertisementActive;
 	
 	private String w9Form;
+
+	private String w9formStatus;
 	
 	private Long analytics;
 	
@@ -134,6 +137,7 @@ public class ListenerProfile {
 		currentTrainingVideo = 0L;
 		points = 0L;
 		profileStatus = ProfileStatusEnum.APPROVED.getStatus();
+		w9formStatus = W9FormStatusEnum.EMPTY.getStatus();
 		totalAttendedCalls = 0L;
 		totalCompletedMinutes = 0L;
 		totalEarning = 0.0;

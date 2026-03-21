@@ -265,6 +265,32 @@ public class ApiV1AdminListenerController extends BaseController {
 		}
 	}
 
+	@PostMapping(ApplicationURIConstants.W9FORM + ApplicationURIConstants.STATUS + ApplicationURIConstants.UPDATE)
+	public ResponseEntity<Object> updateW9FormStatus(@RequestBody IdStatusRequestDto idStatusRequestDto) {
+
+		LOGGER.info(ApplicationConstants.ENTER_LABEL);
+
+		try {
+			ListenerProfile listener = getServiceRegistry().getListenerProfileService()
+					.findByIdAndActiveTrue(idStatusRequestDto.getId());
+			if (listener == null) {
+				LOGGER.info(ApplicationConstants.EXIT_LABEL);
+				return ResponseEntity.ok(getCommonServices()
+						.generateBadResponseWithMessageKey(ErrorDataEnum.CALLER_NOT_EXIST.getCode()));
+			}
+			listener.setW9formStatus(idStatusRequestDto.getStatus());
+			getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateSuccessResponseWithMessageKey(
+					SuccessMsgEnum.W9FORM_STATUS_UPDATED_SUCCESSFULLY.getCode()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.info(ApplicationConstants.EXIT_LABEL);
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
 	@PostMapping(ApplicationURIConstants.REGISTER_STATUS + ApplicationURIConstants.PENDING
 			+ ApplicationURIConstants.LIST)
 	public ResponseEntity<Object> getRegisterStatusList() {

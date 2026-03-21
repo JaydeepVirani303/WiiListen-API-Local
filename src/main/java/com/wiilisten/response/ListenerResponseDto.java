@@ -162,4 +162,7 @@ public class ListenerResponseDto {
 	@JsonProperty("w9s_url")
 	private String w9sUrl;
 
+    @JsonProperty("w9form_status")
+    private String w9formStatus;
+
 }
