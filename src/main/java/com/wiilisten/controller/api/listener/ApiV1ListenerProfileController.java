@@ -70,6 +70,19 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 			UserProfileDto response = new UserProfileDto();
 
+			if (requestProfileDetails.getIdproof() != null) {
+				listener.setIdProof(requestProfileDetails.getIdproof());
+				pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getIdproof());
+				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+			}
+
+			if (requestProfileDetails.getW9form() != null) {
+				listener.setW9Form(requestProfileDetails.getW9form());
+				listener.setW9formStatus(W9FormStatusEnum.PENDING.getStatus());
+				pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getW9form());
+				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
+			}
+
 			String currentStep = listener.getCurrentSignupStep();
 			switch (ListenerSignupStepEnum.valueOf(currentStep)) {
 
@@ -156,27 +169,6 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 				case STEP_5:
 
-					//put logic here
-
-					if (requestProfileDetails.getIdproof() != null) {
-						listener.setIdProof(requestProfileDetails.getIdproof());
-						pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getIdproof());
-					}
-
-					if (requestProfileDetails.getW9form() != null) {
-						listener.setW9Form(requestProfileDetails.getW9form());
-						listener.setW9formStatus(W9FormStatusEnum.PENDING.getStatus());
-						pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getW9form());
-					}
-
-
-					//---
-					listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_6.getValue());
-					getServiceRegistry().getListenerProfileService().saveORupdate(listener);
-					break;
-
-				case STEP_6:
-
 					if (user.getStripeCustomerId() == null) {
 						Customer customer = getServiceRegistry().getPaymentService().createStripeCustomer(user);
 						user.setStripeCustomerId(customer.getId());
@@ -243,9 +235,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 					user.setIsLoggedIn(true);
 					getServiceRegistry().getUserService().saveORupdate(user);
 
-					listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_7.getValue());
-					getServiceRegistry().getListenerProfileService().saveORupdate(listener);
-
+					listener.setCurrentSignupStep(ListenerSignupStepEnum.STEP_6.getValue());
 					getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 					break;
 
