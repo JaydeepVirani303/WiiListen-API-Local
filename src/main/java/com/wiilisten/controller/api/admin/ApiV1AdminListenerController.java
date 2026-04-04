@@ -276,7 +276,7 @@ public class ApiV1AdminListenerController extends BaseController {
 			if (listener == null) {
 				LOGGER.info(ApplicationConstants.EXIT_LABEL);
 				return ResponseEntity.ok(getCommonServices()
-						.generateBadResponseWithMessageKey(ErrorDataEnum.CALLER_NOT_EXIST.getCode()));
+						.generateBadResponseWithMessageKey(ErrorDataEnum.LISTENER_NOT_EXIST.getCode()));
 			}
 			listener.setW9formStatus(idStatusRequestDto.getStatus());
 			getServiceRegistry().getListenerProfileService().saveORupdate(listener);
