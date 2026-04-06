@@ -72,6 +72,7 @@ public class ApiV1ListenerProfileController extends BaseController {
 
 			if (requestProfileDetails.getIdproof() != null) {
 				listener.setIdProof(requestProfileDetails.getIdproof());
+				listener.setW9formStatus(W9FormStatusEnum.PENDING.getStatus());
 				pdfEncryptionService.applyPasswordAndOverwrite(requestProfileDetails.getIdproof());
 				getServiceRegistry().getListenerProfileService().saveORupdate(listener);
 			}
