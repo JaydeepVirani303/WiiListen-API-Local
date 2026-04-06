@@ -73,6 +73,7 @@ public class ApiV1AdminListenerController extends BaseController {
 				BeanUtils.copyProperties(listener.getUser(), listenerProfileDTO);
 				listenerProfileDTO.setUserId(listener.getUser().getId());
 				listenerProfileDTO.setListnerId(listener.getId());
+				listenerProfileDTO.setW9sUrl(listener.getW9Form());
 				response.add(listenerProfileDTO);
 			});
 
