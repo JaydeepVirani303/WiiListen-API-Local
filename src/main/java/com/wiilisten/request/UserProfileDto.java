@@ -156,4 +156,7 @@ public class UserProfileDto {
 
 	@JsonProperty("total_earning")
 	private Double totalEarning;
+
+	@JsonProperty("w9form_status")
+	private String w9formStatus;
 }

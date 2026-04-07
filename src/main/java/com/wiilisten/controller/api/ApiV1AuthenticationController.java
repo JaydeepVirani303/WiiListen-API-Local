@@ -525,8 +525,10 @@ public class ApiV1AuthenticationController extends BaseController {
 			if (user.getRole().equals(UserRoleEnum.LISTENER.getRole())) {
 				ListenerProfile listener = getServiceRegistry().getListenerProfileService()
 						.findByUserAndActiveTrue(user);
-				if (listener != null)
+				if (listener != null) {
 					response.setProfileId(listener.getId());
+					response.setW9formStatus(listener.getW9formStatus());
+				}
 				if (listener.getIsEligibleForPremiumCallSearch() != null
 						&& listener.getIsEligibleForPremiumCallSearch()) {
 					BeanUtils.copyProperties(listener, response);
@@ -633,6 +635,7 @@ public class ApiV1AuthenticationController extends BaseController {
 					response.setProfileId(listener.getId());
 					response.setIsAdvertisementActive(listener.getIsAdvertisementActive());
 					response.setTotalEarning(listener.getTotalEarning());
+					response.setW9formStatus(listener.getW9formStatus());
 				}
 					
 				if (listener.getIsEligibleForPremiumCallSearch() != null
