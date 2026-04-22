@@ -461,6 +461,13 @@ public class ApiV1NotificationController extends BaseController {
 			BeanUtils.copyProperties(notification, dto);
 			dto.setName(notification.getSenderId().getCallName());
 			dto.setNotificationType(ApplicationConstants.REMINDER);
+			if (dto.getDurationInMinutes() != null) {
+				if (dto.getDurationInMinutes() >= 1) {
+					dto.setEvent(ApplicationConstants.CALL_COMPLETE);
+				} else if (dto.getDurationInMinutes() == 0) {
+					dto.setEvent(ApplicationConstants.CALL_INCOMPLETE);
+				}
+			}
 			response.add(dto);
 		});
 		return response;
@@ -477,6 +484,13 @@ public class ApiV1NotificationController extends BaseController {
 			dto.setContent(history.getContent());
 			dto.setDurationInMinutes(history.getBookingId().getDurationInMinutes());
 			dto.setEvent(history.getEvent());
+			if (dto.getDurationInMinutes() != null) {
+				if (dto.getDurationInMinutes() >= 1) {
+					dto.setEvent(ApplicationConstants.CALL_COMPLETE);
+				} else if (dto.getDurationInMinutes() == 0) {
+					dto.setEvent(ApplicationConstants.CALL_INCOMPLETE);
+				}
+			}
 			dto.setPrice(history.getBookingId().getPrice());
 			dto.setSubTotal(history.getBookingId().getSubTotal());
 			dto.setSenderId(history.getSenderId().getId());

@@ -57,6 +57,8 @@ public class ApplicationConstants {
 	public static final String CALL_START_1HOUR = "Call starts in 1 hour";
 	public static final String CALL_START_30MIN = "Call starts in 30 minute";
 	public static final String CALL = "Call";
+	public static final String CALL_COMPLETE = "Call Complete";
+	public static final String CALL_INCOMPLETE = "Call Incomplete";
 	public static final String ALL = "ALL";
 	public static final String TITLE = "title";
 	public static final String BODY = "body";
