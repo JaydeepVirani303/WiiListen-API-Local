@@ -626,7 +626,6 @@ public class ApiV1ListenerProfileController extends BaseController {
 			response.setCallMaxDuration(listener.getCallMaxDuration());
 			response.setRatePerMinute(listener.getRatePerMinute());
 			response.setAvailability(dutyDetailsList);
-			response.setW9formStatus(listener.getW9formStatus());
 
 			if (user.getIsProfileSet()) {
 				getCommonServices().sendProfileUpdatedNotification(user);
@@ -670,7 +669,6 @@ public class ApiV1ListenerProfileController extends BaseController {
 				List<Long> languages = listener.getLanguages().stream().map(language -> language.getId()).toList();
 				response.setLanguages(languages);
 			}
-			response.setW9formStatus(listener.getW9formStatus());
 
 			if (user.getIsProfileSet()) {
 				getCommonServices().sendProfileUpdatedNotification(user);
