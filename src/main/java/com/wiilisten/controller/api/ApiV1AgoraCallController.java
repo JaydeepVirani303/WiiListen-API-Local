@@ -610,7 +610,7 @@ public class ApiV1AgoraCallController extends BaseController {
 			Double ratePerMinute = bookedcall.getListener().getRatePerMinute();
 			if (bookedcall.getType().equals(ApplicationConstants.ON_DEMAND)
 					|| bookedcall.getType().equals(ApplicationConstants.QUICK_CALL)) {
-				ratePerMinute = 1.20D;
+				ratePerMinute = ratePerMinute * 1.20D;
 			}
 			double subTotal = ratePerMinute * duration;
 
