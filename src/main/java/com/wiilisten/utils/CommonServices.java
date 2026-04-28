@@ -915,7 +915,7 @@ public class CommonServices {
 			listenerProfile.setTotalCompletedMinutes(
 					listenerProfile.getTotalCompletedMinutes() + bookedcall.getDurationInMinutes());
 			listenerProfile.setTotalAttendedCalls(size);
-			listenerProfile.setTotalCommission(listenerProfile.getTotalEarning() * (commissionRate.getRate() / 100));
+			listenerProfile.setTotalCommission(listenerProfile.getTotalCommission() + (bookedcall.getPayableAmount() * (commissionRate.getRate() / 100)));
 			serviceRegistry.getListenerProfileService().saveORupdate(listenerProfile);
 		} else {
 
@@ -940,7 +940,7 @@ public class CommonServices {
 			listenerProfile.setTotalCompletedMinutes(
 					listenerProfile.getTotalCompletedMinutes() + bookedcall.getDurationInMinutes());
 			listenerProfile.setTotalAttendedCalls(size);
-			listenerProfile.setTotalCommission(listenerProfile.getTotalEarning() * (commissionRate.getRate() / 100));
+			listenerProfile.setTotalCommission(listenerProfile.getTotalCommission() + (bookedcall.getPayableAmount() * (commissionRate.getRate() / 100)));
 			serviceRegistry.getListenerProfileService().saveORupdate(listenerProfile);
 		}
 	}
