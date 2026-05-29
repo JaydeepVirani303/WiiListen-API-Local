@@ -10,4 +10,6 @@ public interface ListenerReportService extends BaseService<ListenerProfile, Long
 
     public byte[] getReportOfAllListener() throws IOException;
 
+    public byte[] getListenerDocumentsReport() throws IOException;
+
 }

@@ -137,6 +137,8 @@ public class ApplicationURIConstants {
 	public static final String COMPRESS = "/compress";
 	public static final String UPDATE_ORDER = "/update-order";
     public static final String GET_PDF = "/get-pdf";
+	public static final String LISTENER_DOCUMENTS = "/listener-documents";
+
 
 	public static final String USE = "/use";
     public static final String EARNING_LISTENER = "/earning-listener";

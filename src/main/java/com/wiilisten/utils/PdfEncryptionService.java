@@ -202,4 +202,23 @@ public class PdfEncryptionService {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    public String getDecryptedPassword(String publicUrl) {
+        if (publicUrl == null || publicUrl.isEmpty()) return null;
+        Optional<PdfFile> existingPdfOpt = pdfRepository.findByFileUrl(publicUrl);
+        String encryptedOldPassword = existingPdfOpt.map(PdfFile::getPassword).orElse(null);
+        return encryptedOldPassword != null ? AESUtil.decrypt(encryptedOldPassword) : null;
+    }
+
+    public java.util.Map<String, String> getDecryptedPasswordsBatch(java.util.Collection<String> publicUrls) {
+        if (publicUrls == null || publicUrls.isEmpty()) return java.util.Collections.emptyMap();
+        java.util.List<PdfFile> pdfFiles = pdfRepository.findByFileUrlIn(publicUrls);
+        java.util.Map<String, String> resultMap = new java.util.HashMap<>();
+        for (PdfFile pdfFile : pdfFiles) {
+            if (pdfFile.getPassword() != null) {
+                resultMap.put(pdfFile.getFileUrl(), AESUtil.decrypt(pdfFile.getPassword()));
+            }
+        }
+        return resultMap;
+    }
 }

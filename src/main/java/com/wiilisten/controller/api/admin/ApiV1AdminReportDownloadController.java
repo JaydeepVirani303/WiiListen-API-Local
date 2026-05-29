@@ -240,4 +240,22 @@ public class ApiV1AdminReportDownloadController extends BaseController {
     ) throws IOException {
         return pdfEncryptionService.downloadPdfWithPassword(request.getFileUrl());
     }
+
+    @GetMapping(ApplicationURIConstants.LISTENER_DOCUMENTS)
+    public ResponseEntity<byte[]> downloadListenerDocumentsReport() {
+        byte[] pdfBytes = null;
+        try {
+            LOGGER.info("Listener Documents PDF report download request received.");
+            pdfBytes = getServiceRegistry().getListenerReportService().getListenerDocumentsReport();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Listener_Documents_Report.pdf\"")
+                    .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                    .body(pdfBytes);
+
+        } catch (Exception e) {
+            LOGGER.error("Error while generating Listener Documents PDF report: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(pdfBytes);
+        }
+    }
 }
