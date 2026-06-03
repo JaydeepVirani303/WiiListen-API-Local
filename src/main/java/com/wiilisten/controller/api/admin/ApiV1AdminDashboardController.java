@@ -375,16 +375,28 @@ public class ApiV1AdminDashboardController extends BaseController {
 	public ResponseEntity<Object> getPdfPasswordHistory() {
 		LOGGER.info("ENTER :: getPdfPasswordHistory");
 		try {
-			User user = getLoggedInUser();
-			if (user == null) {
-				return ResponseEntity.ok(getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
-			}
 			List<PdfPasswordChangeHistory> history = pdfEncryptionService.getPasswordChangeHistory();
 			LOGGER.info("EXIT :: getPdfPasswordHistory");
 			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(history));
 		} catch (Exception e) {
 			e.printStackTrace();
 			LOGGER.error("Error in getPdfPasswordHistory: {}", e.getMessage());
+			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
+		}
+	}
+
+	@GetMapping("/pdf-password/current")
+	public ResponseEntity<Object> getCurrentPdfPassword() {
+		LOGGER.info("ENTER :: getCurrentPdfPassword");
+		try {
+			String currentPassword = pdfEncryptionService.getGlobalPdfPassword();
+			Map<String, String> response = new HashMap<>();
+			response.put("currentPassword", currentPassword);
+			LOGGER.info("EXIT :: getCurrentPdfPassword");
+			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(response));
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.error("Error in getCurrentPdfPassword: {}", e.getMessage());
 			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
 		}
 	}
