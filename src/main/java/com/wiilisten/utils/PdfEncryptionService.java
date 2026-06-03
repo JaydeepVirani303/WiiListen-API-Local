@@ -6,7 +6,12 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.itextpdf.kernel.pdf.*;
 import com.wiilisten.config.S3BucketProperties;
 import com.wiilisten.entity.PdfFile;
+import com.wiilisten.entity.SystemSetting;
+import com.wiilisten.entity.PdfPasswordChangeHistory;
+import com.wiilisten.entity.User;
 import com.wiilisten.repo.PdfRepository;
+import com.wiilisten.repo.SystemSettingRepository;
+import com.wiilisten.repo.PdfPasswordChangeHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,6 +23,9 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Optional;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +34,8 @@ public class PdfEncryptionService {
     private final PdfRepository pdfRepository;
     private final AmazonS3 amazonS3;
     private final S3BucketProperties s3BucketProperties;
+    private final SystemSettingRepository systemSettingRepository;
+    private final PdfPasswordChangeHistoryRepository pdfPasswordChangeHistoryRepository;
 
     /**
      * Apply random password record and overwrite in S3 (without breaking public access)
@@ -46,10 +56,8 @@ public class PdfEncryptionService {
         // 3. Decrypt if old password exists
         File pdfToUpload = oldPassword != null ? decryptPdf(originalPdf, oldPassword) : originalPdf;
 
-        // 4. Generate new password
-        String newPassword = generateRandomPassword(10);
-
-        System.out.println("new Password :" + newPassword);
+        // 4. Get active global password
+        String newPassword = getGlobalPdfPassword();
         // 5. Encrypt PDF with new password
         File encryptedPdf = encryptPdf(pdfToUpload, newPassword);
 
@@ -240,5 +248,125 @@ public class PdfEncryptionService {
             }
         }
         return resultMap;
+    }
+
+    public String getGlobalPdfPassword() {
+        return systemSettingRepository.findBySettingKey("GLOBAL_PDF_PASSWORD")
+                .map(setting -> AESUtil.decrypt(setting.getSettingValue()))
+                .orElseThrow(() -> new RuntimeException("Global PDF password setting 'GLOBAL_PDF_PASSWORD' is not configured in the database."));
+    }
+
+    public void updateGlobalPdfPassword(User adminUser, String newPasswordRaw) {
+        String oldPasswordRaw = getGlobalPdfPassword();
+
+        String encryptedOldPassword = AESUtil.encrypt(oldPasswordRaw);
+        String encryptedNewPassword = AESUtil.encrypt(newPasswordRaw);
+
+        PdfPasswordChangeHistory history = PdfPasswordChangeHistory.builder()
+                .changedByUser(adminUser)
+                .oldPassword(encryptedOldPassword)
+                .newPassword(encryptedNewPassword)
+                .status(ApplicationConstants.PENDING)
+                .details("Initiating batch re-encryption process...")
+                .build();
+        history = pdfPasswordChangeHistoryRepository.save(history);
+
+        SystemSetting systemSetting = systemSettingRepository.findBySettingKey("GLOBAL_PDF_PASSWORD")
+                .orElseThrow(() -> new RuntimeException("Global PDF password setting 'GLOBAL_PDF_PASSWORD' is not configured in the database."));
+        systemSetting.setSettingValue(encryptedNewPassword);
+        systemSettingRepository.save(systemSetting);
+
+        final Long historyId = history.getId();
+        CompletableFuture.runAsync(() -> {
+            processReencryption(historyId, oldPasswordRaw, newPasswordRaw);
+        });
+    }
+
+    private void processReencryption(Long historyId, String oldPassword, String newPassword) {
+        Optional<PdfPasswordChangeHistory> historyOpt = pdfPasswordChangeHistoryRepository.findById(historyId);
+        if (historyOpt.isEmpty()) return;
+        PdfPasswordChangeHistory history = historyOpt.get();
+
+        history.setStatus(ApplicationConstants.IN_PROGRESS);
+        history.setDetails("Re-encryption in progress. Fetching PDF files...");
+        pdfPasswordChangeHistoryRepository.save(history);
+
+        List<PdfFile> pdfFiles = pdfRepository.findAll();
+        if (pdfFiles.isEmpty()) {
+            history.setStatus(ApplicationConstants.COMPLETED);
+            history.setDetails("No PDF files found to re-encrypt.");
+            pdfPasswordChangeHistoryRepository.save(history);
+            return;
+        }
+
+        int totalFiles = pdfFiles.size();
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+        ConcurrentLinkedQueue<String> errorLogs = new ConcurrentLinkedQueue<>();
+
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, totalFiles));
+
+        for (PdfFile pdfFile : pdfFiles) {
+            executor.submit(() -> {
+                try {
+                    String publicUrl = pdfFile.getFileUrl();
+                    String bucketName = s3BucketProperties.getBucket();
+                    String key = extractS3KeyFromUrl(publicUrl);
+
+                    File originalPdf = downloadFileFromS3(publicUrl);
+
+                    String storedEncryptedPassword = pdfFile.getPassword();
+                    String fileOldPassword = (storedEncryptedPassword != null) ? AESUtil.decrypt(storedEncryptedPassword) : oldPassword;
+
+                    File pdfToUpload = fileOldPassword != null ? decryptPdf(originalPdf, fileOldPassword) : originalPdf;
+
+                    File encryptedPdf = encryptPdf(pdfToUpload, newPassword);
+
+                    amazonS3.putObject(new PutObjectRequest(bucketName, key, encryptedPdf)
+                            .withCannedAcl(CannedAccessControlList.PublicRead));
+
+                    pdfFile.setPassword(AESUtil.encrypt(newPassword));
+                    pdfRepository.save(pdfFile);
+
+                    originalPdf.delete();
+                    if (pdfToUpload != originalPdf) pdfToUpload.delete();
+                    encryptedPdf.delete();
+
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failureCount.incrementAndGet();
+                    errorLogs.add("Failed to re-encrypt file ID " + pdfFile.getId() + " (" + pdfFile.getFileName() + "): " + e.getMessage());
+                }
+            });
+        }
+
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(30, TimeUnit.MINUTES)) {
+                executor.shutdownNow();
+                errorLogs.add("Execution timed out before all tasks completed.");
+            }
+        } catch (InterruptedException ie) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+            errorLogs.add("Execution was interrupted.");
+        }
+
+        String finalDetails = String.format("Processed %d files. Success: %d, Failure: %d.\n", totalFiles, successCount.get(), failureCount.get());
+        if (!errorLogs.isEmpty()) {
+            finalDetails += "Errors:\n" + String.join("\n", errorLogs);
+        }
+
+        history.setDetails(finalDetails);
+        if (failureCount.get() > 0) {
+            history.setStatus("COMPLETED_WITH_ERRORS");
+        } else {
+            history.setStatus(ApplicationConstants.COMPLETED);
+        }
+        pdfPasswordChangeHistoryRepository.save(history);
+    }
+
+    public List<PdfPasswordChangeHistory> getPasswordChangeHistory() {
+        return pdfPasswordChangeHistoryRepository.findAllByOrderByChangedAtDesc();
     }
 }

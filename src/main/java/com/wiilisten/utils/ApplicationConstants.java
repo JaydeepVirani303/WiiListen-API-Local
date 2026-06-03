@@ -82,6 +82,8 @@ public class ApplicationConstants {
 	public static final String ACTIVE = "ACTIVE";
 	public static final String DEACTIVE = "DEACTIVE";
 	public static final String EXPIRED = "EXPIRED";
+	public static final String IN_PROGRESS = "IN_PROGRESS";
+
 	public static final String COMPLETED = "COMPLETED";
 	public static final String PAID = "PAID";
 	public static final String TIME="TIME";
