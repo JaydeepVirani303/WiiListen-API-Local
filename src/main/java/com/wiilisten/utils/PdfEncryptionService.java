@@ -171,6 +171,7 @@ public class PdfEncryptionService {
      */
 
     public ResponseEntity<byte[]> downloadPdfWithPassword(String fileUrl) throws IOException {
+        /*
         // 1. Download PDF from S3
         File downloadedPdf = downloadFileFromS3(fileUrl);
 
@@ -199,6 +200,25 @@ public class PdfEncryptionService {
         // 6. Return PDF as attachment
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=decrypted.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+        */
+
+        // New Logic: Return the file as-is from S3 (which is password-protected)
+        File downloadedPdf = downloadFileFromS3(fileUrl);
+
+        byte[] pdfBytes;
+        try (FileInputStream fis = new FileInputStream(downloadedPdf)) {
+            pdfBytes = fis.readAllBytes();
+        }
+
+        downloadedPdf.delete();
+
+        String key = extractS3KeyFromUrl(fileUrl);
+        String filename = key.contains("/") ? key.substring(key.lastIndexOf("/") + 1) : "encrypted.pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
