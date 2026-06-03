@@ -8,7 +8,6 @@ import com.wiilisten.config.S3BucketProperties;
 import com.wiilisten.entity.PdfFile;
 import com.wiilisten.entity.SystemSetting;
 import com.wiilisten.entity.PdfPasswordChangeHistory;
-import com.wiilisten.entity.User;
 import com.wiilisten.repo.PdfRepository;
 import com.wiilisten.repo.SystemSettingRepository;
 import com.wiilisten.repo.PdfPasswordChangeHistoryRepository;
@@ -256,14 +255,13 @@ public class PdfEncryptionService {
                 .orElseThrow(() -> new RuntimeException("Global PDF password setting 'GLOBAL_PDF_PASSWORD' is not configured in the database."));
     }
 
-    public void updateGlobalPdfPassword(User adminUser, String newPasswordRaw) {
+    public void updateGlobalPdfPassword(String newPasswordRaw) {
         String oldPasswordRaw = getGlobalPdfPassword();
 
         String encryptedOldPassword = AESUtil.encrypt(oldPasswordRaw);
         String encryptedNewPassword = AESUtil.encrypt(newPasswordRaw);
 
         PdfPasswordChangeHistory history = PdfPasswordChangeHistory.builder()
-                .changedByUser(adminUser)
                 .oldPassword(encryptedOldPassword)
                 .newPassword(encryptedNewPassword)
                 .status(ApplicationConstants.PENDING)

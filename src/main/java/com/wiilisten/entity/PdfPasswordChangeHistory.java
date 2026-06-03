@@ -21,10 +21,6 @@ public class PdfPasswordChangeHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "changed_by_user_id", nullable = false)
-    private User changedByUser;
-
     @Column(name = "old_password", length = 500)
     private String oldPassword; // AES encrypted
 

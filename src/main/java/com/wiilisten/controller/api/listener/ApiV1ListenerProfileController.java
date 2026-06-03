@@ -943,45 +943,5 @@ public class ApiV1ListenerProfileController extends BaseController {
 		}
 	}
 
-	@PostMapping("/pdf-password/update")
-	public ResponseEntity<Object> updatePdfPassword(@RequestBody Map<String, String> request) {
-		LOGGER.info("ENTER :: updatePdfPassword");
-		try {
-			User user = getLoggedInUser();
-			if (user == null) {
-				return ResponseEntity.ok(getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
-			}
-			String newPassword = request.get("password");
-			if (newPassword == null || newPassword.trim().isEmpty()) {
-				return ResponseEntity.ok(getCommonServices().generateFailureResponse("Password cannot be empty."));
-			}
 
-			pdfEncryptionService.updateGlobalPdfPassword(user, newPassword);
-
-			LOGGER.info("EXIT :: updatePdfPassword");
-			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse("Password update initiated. Re-encrypting PDFs in background..."));
-		} catch (Exception e) {
-			e.printStackTrace();
-			LOGGER.error("Error in updatePdfPassword: {}", e.getMessage());
-			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-		}
-	}
-
-	@GetMapping("/pdf-password/history")
-	public ResponseEntity<Object> getPdfPasswordHistory() {
-		LOGGER.info("ENTER :: getPdfPasswordHistory");
-		try {
-			User user = getLoggedInUser();
-			if (user == null) {
-				return ResponseEntity.ok(getCommonServices().generateBadResponseWithMessageKey(ErrorDataEnum.INVALID_USER.getCode()));
-			}
-			List<PdfPasswordChangeHistory> history = pdfEncryptionService.getPasswordChangeHistory();
-			LOGGER.info("EXIT :: getPdfPasswordHistory");
-			return ResponseEntity.ok(getCommonServices().generateGenericSuccessResponse(history));
-		} catch (Exception e) {
-			e.printStackTrace();
-			LOGGER.error("Error in getPdfPasswordHistory: {}", e.getMessage());
-			return ResponseEntity.ok(getCommonServices().generateFailureResponse());
-		}
-	}
 }
